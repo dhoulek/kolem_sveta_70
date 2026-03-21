@@ -4,6 +4,10 @@
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GPS Distance Tracker</title>
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
   <style>
     * {
       box-sizing: border-box;
@@ -33,7 +37,6 @@
       margin: 10px 0;
     }
 
-    /* Compass container */
     #compass-wrapper {
       position: relative;
       width: 180px;
@@ -41,7 +44,6 @@
       margin: 10px auto;
     }
 
-    /* Outer ring – stays fixed, shows N/S/E/W */
     #compass-ring {
       position: absolute;
       inset: 0;
@@ -83,7 +85,6 @@
       transform: translateY(-50%);
     }
 
-    /* Inner disc – rotates with device heading (so N always points north on screen) */
     #compass-disc {
       position: absolute;
       inset: 20px;
@@ -92,7 +93,6 @@
       transition: transform 0.3s ease;
     }
 
-    /* Arrow pointing to TARGET – rotates independently */
     #compass-arrow-wrap {
       position: absolute;
       inset: 0;
@@ -125,7 +125,6 @@
       border-top: 40px solid #7f8c8d;
     }
 
-    /* Center dot */
     #compass-center {
       position: absolute;
       width: 14px;
@@ -178,10 +177,122 @@
       display: none;
     }
 
+    #btn-map {
+      background: #27ae60;
+    }
+
     #debug {
       font-size: 0.75em;
       color: #aaa;
       margin-top: 8px;
+    }
+
+    /* ── Map Modal ── */
+    #map-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.65);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #map-modal.open {
+      display: flex;
+    }
+
+    #map-box {
+      background: white;
+      border-radius: 12px;
+      width: 96vw;
+      max-width: 520px;
+      overflow: hidden;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      display: flex;
+      flex-direction: column;
+    }
+
+    #map-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      background: #2c3e50;
+      color: white;
+      flex-shrink: 0;
+    }
+
+    #map-header span {
+      font-weight: bold;
+      font-size: 1em;
+    }
+
+    #map-close {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 1.5em;
+      cursor: pointer;
+      padding: 0 4px;
+      line-height: 1;
+    }
+
+    /* Layer toggle buttons */
+    #map-layer-btns {
+      display: flex;
+      gap: 6px;
+      padding: 8px 12px;
+      background: #34495e;
+      flex-shrink: 0;
+    }
+
+    .layer-btn {
+      font-size: 0.78em;
+      padding: 5px 10px;
+      border-radius: 6px;
+      border: 2px solid transparent;
+      background: #4a6278;
+      color: white;
+      cursor: pointer;
+    }
+
+    .layer-btn.active {
+      background: #27ae60;
+      border-color: #2ecc71;
+    }
+
+    /* Leaflet map container */
+    #leaflet-map {
+      width: 100%;
+      height: 55vw;
+      max-height: 340px;
+      min-height: 220px;
+    }
+
+    #map-legend {
+      padding: 7px 14px;
+      font-size: 0.75em;
+      color: #555;
+      display: flex;
+      gap: 14px;
+      justify-content: center;
+      flex-wrap: wrap;
+      border-top: 1px solid #eee;
+      flex-shrink: 0;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .legend-dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      flex-shrink: 0;
     }
   </style>
 </head>
@@ -192,46 +303,78 @@
   <p id="status">Press Start to begin</p>
 
   <div class="btn-row">
-    <button onclick="startTracking()">▶ Start</button>
-    <button id="btn-ios" onclick="requestIOSPermission()">🔓 Allow Compass (iOS)</button>
+    <button onclick="startTracking()">&#9654; Start</button>
+    <button id="btn-map" onclick="openMap()">&#128506; Map</button>
+    <button id="btn-ios" onclick="requestIOSPermission()">&#128275; Allow Compass (iOS)</button>
+  </div>
+
+  <!-- Map Modal -->
+  <div id="map-modal" onclick="closeMapOutside(event)">
+    <div id="map-box">
+      <div id="map-header">
+        <span>&#128506; Satellitenkarte</span>
+        <button id="map-close" onclick="closeMap()">&#x2715;</button>
+      </div>
+
+      <!-- Layer toggle -->
+      <div id="map-layer-btns">
+        <button class="layer-btn active" id="btn-satellite" onclick="setLayer('satellite')">&#128752; Satellit</button>
+        <button class="layer-btn" id="btn-street" onclick="setLayer('street')">&#128205; Karte</button>
+        <button class="layer-btn" id="btn-topo" onclick="setLayer('topo')">&#9968; Topo</button>
+      </div>
+
+      <!-- Leaflet map -->
+      <div id="leaflet-map"></div>
+
+      <div id="map-legend">
+        <div class="legend-item">
+          <div class="legend-dot" style="background:#3498db"></div> Meine Position
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot" style="background:#e74c3c"></div> Ziel
+        </div>
+        <div class="legend-item">
+          <svg width="22" height="8" style="flex-shrink:0">
+            <line x1="0" y1="4" x2="22" y2="4" stroke="#e74c3c" stroke-width="2" stroke-dasharray="4,3" />
+          </svg>
+          Luftlinie
+        </div>
+      </div>
+    </div>
   </div>
 
   <div id="distance">--</div>
 
   <div id="compass-wrapper">
-    <!-- Static outer ring with cardinal labels -->
     <div id="compass-ring">
       <span class="cardinal n">N</span>
       <span class="cardinal s">S</span>
       <span class="cardinal e">E</span>
       <span class="cardinal w">W</span>
     </div>
-
-    <!-- Rotating disc (counter-rotates to keep N pointing up on screen) -->
     <div id="compass-disc"></div>
-
-    <!-- Arrow pointing to target -->
     <div id="compass-arrow-wrap">
       <div id="compass-arrow"></div>
     </div>
-
-    <!-- Center dot (always on top) -->
     <div id="compass-center"></div>
   </div>
-  <div id="compass-label">🔴 Pfeil zeigt zum Ziel</div>
+  <div id="compass-label">&#128308; Pfeil zeigt zum Ziel</div>
 
-  <div id="message">🎉 Ziel erreicht!</div>
+  <div id="message">&#127881; Ziel erreicht!</div>
   <div id="debug"></div>
 
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
   <script>
-    // 🔧 HIER KOORDINATEN ANPASSEN
+    // KOORDINATEN ANPASSEN
     const targetLat = 48.2082;
     const targetLon = 16.3738;
-    const arrivalThreshold = 20; // meters
+    const arrivalThreshold = 20;
 
     let currentLat = null;
     let currentLon = null;
-    let deviceHeading = null; // degrees from north, clockwise
+    let deviceHeading = null;
     let watchId = null;
 
     // ── Helpers ──────────────────────────────────────────────────
@@ -249,7 +392,6 @@
       return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 
-    // Bearing from current position to target (degrees clockwise from north)
     function getBearing(lat1, lon1, lat2, lon2) {
       const dLon = toRad(lon2 - lon1);
       const y = Math.sin(dLon) * Math.cos(toRad(lat2));
@@ -258,21 +400,16 @@
       return (toDeg(Math.atan2(y, x)) + 360) % 360;
     }
 
-    // ── UI Update ─────────────────────────────────────────────────
+    // ── UI ────────────────────────────────────────────────────────
 
     function updateUI() {
       if (currentLat === null) {
-        document.getElementById("distance").innerText = "Lade Position…";
+        document.getElementById("distance").innerText = "Lade Position...";
         return;
       }
-
       const dist = getDistance(currentLat, currentLon, targetLat, targetLon);
       document.getElementById("distance").innerText = dist.toFixed(1) + " m";
-
-      if (dist < arrivalThreshold) {
-        document.getElementById("message").style.display = "block";
-      }
-
+      if (dist < arrivalThreshold) document.getElementById("message").style.display = "block";
       updateCompass();
     }
 
@@ -280,23 +417,17 @@
       const arrowWrap = document.getElementById("compass-arrow-wrap");
       const disc = document.getElementById("compass-disc");
       const debug = document.getElementById("debug");
-
       if (currentLat === null) return;
-
       const bearing = getBearing(currentLat, currentLon, targetLat, targetLon);
-
       if (deviceHeading !== null) {
-        // Arrow angle = bearing relative to where the device is pointing
         const arrowAngle = (bearing - deviceHeading + 360) % 360;
-        arrowWrap.style.transform = `rotate(${arrowAngle}deg)`;
-        // Counter-rotate disc so N stays at top
-        disc.style.transform = `rotate(${-deviceHeading}deg)`;
-        debug.innerText = `Heading: ${deviceHeading.toFixed(0)}° | Bearing: ${bearing.toFixed(0)}° | Arrow: ${arrowAngle.toFixed(0)}°`;
+        arrowWrap.style.transform = "rotate(" + arrowAngle + "deg)";
+        disc.style.transform = "rotate(" + (-deviceHeading) + "deg)";
+        debug.innerText = "Heading: " + deviceHeading.toFixed(0) + " | Bearing: " + bearing.toFixed(0) + " | Arrow: " + arrowAngle.toFixed(0);
       } else {
-        // No heading available – just point arrow toward absolute bearing
-        arrowWrap.style.transform = `rotate(${bearing}deg)`;
-        disc.style.transform = `rotate(0deg)`;
-        debug.innerText = `Kein Kompass-Signal – Bearing: ${bearing.toFixed(0)}° (Orientierung unbekannt)`;
+        arrowWrap.style.transform = "rotate(" + bearing + "deg)";
+        disc.style.transform = "rotate(0deg)";
+        debug.innerText = "Kein Kompass – Bearing: " + bearing.toFixed(0);
       }
     }
 
@@ -304,30 +435,20 @@
 
     function handleOrientation(event) {
       let heading = null;
-
-      // iOS: webkitCompassHeading is already magnetic north, clockwise
       if (event.webkitCompassHeading !== undefined && event.webkitCompassHeading !== null) {
         heading = event.webkitCompassHeading;
       } else if (event.alpha !== null) {
-        // Android: alpha is CCW from north in absolute mode
         heading = (360 - event.alpha) % 360;
       }
-
-      if (heading !== null) {
-        deviceHeading = heading;
-      }
+      if (heading !== null) deviceHeading = heading;
     }
 
     function startOrientationListener() {
-      if (!window.DeviceOrientationEvent) {
-        document.getElementById("debug").innerText = "DeviceOrientation nicht unterstützt";
-        return;
-      }
+      if (!window.DeviceOrientationEvent) return;
       window.addEventListener("deviceorientationabsolute", handleOrientation, true);
       window.addEventListener("deviceorientation", handleOrientation, true);
     }
 
-    // iOS 13+ requires explicit permission request from a user gesture
     async function requestIOSPermission() {
       if (typeof DeviceOrientationEvent.requestPermission === "function") {
         try {
@@ -335,7 +456,7 @@
           if (result === "granted") {
             startOrientationListener();
             document.getElementById("btn-ios").style.display = "none";
-            document.getElementById("status").innerText = "Kompass aktiv ✓";
+            document.getElementById("status").innerText = "Kompass aktiv";
           } else {
             document.getElementById("status").innerText = "Kompass-Erlaubnis verweigert";
           }
@@ -348,33 +469,33 @@
     // ── GPS ───────────────────────────────────────────────────────
 
     function handleError(error) {
-      const msgs = { 1: "Erlaubnis verweigert", 2: "Position nicht verfügbar", 3: "Timeout" };
+      const msgs = { 1: "Erlaubnis verweigert", 2: "Position nicht verfuegbar", 3: "Timeout" };
       document.getElementById("status").innerText = "GPS Fehler: " + (msgs[error.code] || error.message);
     }
 
     function startTracking() {
       if (!navigator.geolocation) {
-        document.getElementById("status").innerText = "Geolocation nicht unterstützt";
+        document.getElementById("status").innerText = "Geolocation nicht unterstuetzt";
         return;
       }
-      document.getElementById("status").innerText = "Position wird ermittelt…";
-
-      // Show iOS compass button if needed
+      document.getElementById("status").innerText = "Position wird ermittelt...";
       if (typeof DeviceOrientationEvent !== "undefined" &&
         typeof DeviceOrientationEvent.requestPermission === "function") {
         document.getElementById("btn-ios").style.display = "inline-block";
       } else {
         startOrientationListener();
       }
-
       navigator.geolocation.getCurrentPosition(
-        (pos) => {
+        function (pos) {
           currentLat = pos.coords.latitude;
           currentLon = pos.coords.longitude;
-          document.getElementById("status").innerText = "Tracking aktiv ✓";
-
+          document.getElementById("status").innerText = "Tracking aktiv";
           watchId = navigator.geolocation.watchPosition(
-            (p) => { currentLat = p.coords.latitude; currentLon = p.coords.longitude; },
+            function (p) {
+              currentLat = p.coords.latitude;
+              currentLon = p.coords.longitude;
+              updateMyMarker();
+            },
             handleError,
             { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
           );
@@ -385,6 +506,129 @@
     }
 
     setInterval(updateUI, 500);
+
+    // ── Leaflet Map ───────────────────────────────────────────────
+
+    let leafletMap = null;
+    let myMarker = null;
+    let targetMarker = null;
+    let luftlinie = null;
+    let currentLayer = 'satellite';
+
+    const tileLayers = {
+      satellite: L.tileLayer(
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        { attribution: 'Tiles &copy; Esri', maxZoom: 19 }
+      ),
+      street: L.tileLayer(
+        'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        { attribution: '&copy; OpenStreetMap contributors', maxZoom: 19 }
+      ),
+      topo: L.tileLayer(
+        'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+        { attribution: '&copy; OpenTopoMap', maxZoom: 17 }
+      )
+    };
+
+    // Custom marker icons
+    const blueIcon = L.divIcon({
+      className: '',
+      html: '<div style="width:18px;height:18px;background:#3498db;border:3px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.4)"></div>',
+      iconSize: [18, 18],
+      iconAnchor: [9, 9]
+    });
+
+    const redIcon = L.divIcon({
+      className: '',
+      html: '<div style="width:18px;height:18px;background:#e74c3c;border:3px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.4)"></div>',
+      iconSize: [18, 18],
+      iconAnchor: [9, 9]
+    });
+
+    function initMap() {
+      if (leafletMap) return; // already initialized
+
+      const myLat = currentLat !== null ? currentLat : targetLat + 0.02;
+      const myLon = currentLon !== null ? currentLon : targetLon + 0.02;
+
+      // Center between both points
+      const centerLat = (myLat + targetLat) / 2;
+      const centerLon = (myLon + targetLon) / 2;
+
+      leafletMap = L.map('leaflet-map', { zoomControl: true }).setView([centerLat, centerLon], 14);
+
+      // Add default satellite layer
+      tileLayers.satellite.addTo(leafletMap);
+
+      // Target marker
+      targetMarker = L.marker([targetLat, targetLon], { icon: redIcon })
+        .addTo(leafletMap)
+        .bindPopup('<b>Ziel</b><br>' + targetLat.toFixed(5) + ', ' + targetLon.toFixed(5));
+
+      // My position marker
+      myMarker = L.marker([myLat, myLon], { icon: blueIcon })
+        .addTo(leafletMap)
+        .bindPopup(currentLat !== null ? '<b>Meine Position</b>' : '<b>Meine Position</b><br>(Demo)');
+
+      // Luftlinie
+      luftlinie = L.polyline(
+        [[myLat, myLon], [targetLat, targetLon]],
+        { color: '#e74c3c', weight: 2.5, dashArray: '7, 6', opacity: 0.9 }
+      ).addTo(leafletMap);
+
+      // Fit both markers in view
+      fitMap(myLat, myLon);
+    }
+
+    function fitMap(myLat, myLon) {
+      if (!leafletMap) return;
+      const bounds = L.latLngBounds(
+        [[myLat, myLon], [targetLat, targetLon]]
+      ).pad(0.25);
+      leafletMap.fitBounds(bounds);
+    }
+
+    function updateMyMarker() {
+      if (!leafletMap || currentLat === null) return;
+      myMarker.setLatLng([currentLat, currentLon]);
+      luftlinie.setLatLngs([[currentLat, currentLon], [targetLat, targetLon]]);
+      const dist = getDistance(currentLat, currentLon, targetLat, targetLon);
+      myMarker.setPopupContent('<b>Meine Position</b><br>' +
+        currentLat.toFixed(5) + ', ' + currentLon.toFixed(5) +
+        '<br>Entfernung: ' + (dist >= 1000 ? (dist / 1000).toFixed(2) + ' km' : dist.toFixed(0) + ' m'));
+    }
+
+    function setLayer(name) {
+      if (!leafletMap || name === currentLayer) return;
+      tileLayers[currentLayer].remove();
+      tileLayers[name].addTo(leafletMap);
+      currentLayer = name;
+      document.querySelectorAll('.layer-btn').forEach(function (b) { b.classList.remove('active'); });
+      document.getElementById('btn-' + name).classList.add('active');
+    }
+
+    function openMap() {
+      document.getElementById("map-modal").classList.add("open");
+      // Leaflet needs a moment after display:flex kicks in
+      setTimeout(function () {
+        initMap();
+        if (leafletMap) {
+          leafletMap.invalidateSize();
+          const myLat = currentLat !== null ? currentLat : targetLat + 0.02;
+          const myLon = currentLon !== null ? currentLon : targetLon + 0.02;
+          fitMap(myLat, myLon);
+          updateMyMarker();
+        }
+      }, 120);
+    }
+
+    function closeMap() {
+      document.getElementById("map-modal").classList.remove("open");
+    }
+
+    function closeMapOutside(e) {
+      if (e.target === document.getElementById("map-modal")) closeMap();
+    }
   </script>
 </body>
 
