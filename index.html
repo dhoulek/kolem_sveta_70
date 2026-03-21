@@ -1,148 +1,155 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GPS Distance Tracker</title>
+  <title>GPS Distance Tracker Hynek</title>
   <style>
     body {
       font-family: sans-serif;
       text-align: center;
       padding: 20px;
     }
+
     #distance {
       font-size: 2em;
       margin: 20px 0;
     }
+
     #status {
       color: gray;
       margin-bottom: 10px;
     }
+
     #message {
       font-size: 1.5em;
       color: green;
       display: none;
     }
+
     button {
       font-size: 1.2em;
       padding: 10px 20px;
     }
   </style>
 </head>
+
 <body>
 
-<h2>Distance Tracker</h2>
+  <h2>Distance Tracker</h2>
 
-<p id="status">Press start to begin</p>
-<button onclick="startTracking()">Start Tracking</button>
+  <p id="status">Press start to begin</p>
+  <button onclick="startTracking()">Start Tracking</button>
 
-<div id="distance">--</div>
-<div id="message">🎉 You have arrived!</div>
+  <div id="distance">--</div>
+  <div id="message">🎉 You have arrived!</div>
 
-<script>
-// 🔧 CHANGE THESE
-const targetLat = 48.2082;
-const targetLon = 16.3738;
-const arrivalThreshold = 20; // meters
+  <script>
+    // 🔧 CHANGE THESE
+    const targetLat = 48.2082;
+    const targetLon = 16.3738;
+    const arrivalThreshold = 20; // meters
 
-let currentLat = null;
-let currentLon = null;
-let watchId = null;
+    let currentLat = null;
+    let currentLon = null;
+    let watchId = null;
 
-function toRad(value) {
-  return value * Math.PI / 180;
-}
+    function toRad(value) {
+      return value * Math.PI / 180;
+    }
 
-// Haversine formula
-function getDistance(lat1, lon1, lat2, lon2) {
-  const R = 6371000;
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
+    // Haversine formula
+    function getDistance(lat1, lon1, lat2, lon2) {
+      const R = 6371000;
+      const dLat = toRad(lat2 - lat1);
+      const dLon = toRad(lon2 - lon1);
 
-  const a =
-    Math.sin(dLat/2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-    Math.sin(dLon/2) ** 2;
+      const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+        Math.sin(dLon / 2) ** 2;
 
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    }
 
-function updateUI() {
-  if (currentLat === null) {
-    document.getElementById("distance").innerText = "Getting location...";
-    return;
-  }
+    function updateUI() {
+      if (currentLat === null) {
+        document.getElementById("distance").innerText = "Getting location...";
+        return;
+      }
 
-  const distance = getDistance(currentLat, currentLon, targetLat, targetLon);
+      const distance = getDistance(currentLat, currentLon, targetLat, targetLon);
 
-  document.getElementById("distance").innerText =
-    distance.toFixed(1) + " m";
+      document.getElementById("distance").innerText =
+        distance.toFixed(1) + " m";
 
-  if (distance < arrivalThreshold) {
-    document.getElementById("message").style.display = "block";
-  }
-}
+      if (distance < arrivalThreshold) {
+        document.getElementById("message").style.display = "block";
+      }
+    }
 
-function handleError(error) {
-  console.log(error.code, error.message);
+    function handleError(error) {
+      console.log(error.code, error.message);
 
-  let msg = "Error: ";
-  switch (error.code) {
-    case 1: msg += "Permission denied"; break;
-    case 2: msg += "Position unavailable"; break;
-    case 3: msg += "Timeout"; break;
-    default: msg += error.message;
-  }
+      let msg = "Error: ";
+      switch (error.code) {
+        case 1: msg += "Permission denied"; break;
+        case 2: msg += "Position unavailable"; break;
+        case 3: msg += "Timeout"; break;
+        default: msg += error.message;
+      }
 
-  document.getElementById("status").innerText = msg;
-}
+      document.getElementById("status").innerText = msg;
+    }
 
-function startTracking() {
-  const status = document.getElementById("status");
+    function startTracking() {
+      const status = document.getElementById("status");
 
-  if (!navigator.geolocation) {
-    status.innerText = "Geolocation not supported";
-    return;
-  }
+      if (!navigator.geolocation) {
+        status.innerText = "Geolocation not supported";
+        return;
+      }
 
-  status.innerText = "Requesting location...";
+      status.innerText = "Requesting location...";
 
-  // STEP 1: Try single fix first (important for iOS)
-  navigator.geolocation.getCurrentPosition(
-    (position) => {
-      currentLat = position.coords.latitude;
-      currentLon = position.coords.longitude;
+      // STEP 1: Try single fix first (important for iOS)
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          currentLat = position.coords.latitude;
+          currentLon = position.coords.longitude;
 
-      status.innerText = "Tracking started";
+          status.innerText = "Tracking started";
 
-      // STEP 2: Start continuous tracking
-      watchId = navigator.geolocation.watchPosition(
-        (pos) => {
-          currentLat = pos.coords.latitude;
-          currentLon = pos.coords.longitude;
+          // STEP 2: Start continuous tracking
+          watchId = navigator.geolocation.watchPosition(
+            (pos) => {
+              currentLat = pos.coords.latitude;
+              currentLon = pos.coords.longitude;
+            },
+            handleError,
+            {
+              enableHighAccuracy: true,
+              timeout: 10000,
+              maximumAge: 0
+            }
+          );
         },
-        handleError,
+        (error) => {
+          handleError(error);
+        },
         {
           enableHighAccuracy: true,
           timeout: 10000,
           maximumAge: 0
         }
       );
-    },
-    (error) => {
-      handleError(error);
-    },
-    {
-      enableHighAccuracy: true,
-      timeout: 10000,
-      maximumAge: 0
     }
-  );
-}
 
-// Update distance every second
-setInterval(updateUI, 1000);
-</script>
+    // Update distance every second
+    setInterval(updateUI, 1000);
+  </script>
 
 </body>
+
 </html>
