@@ -3,153 +3,389 @@
 
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GPS Distance Tracker Hynek</title>
+  <title>GPS Distance Tracker</title>
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       font-family: sans-serif;
       text-align: center;
       padding: 20px;
+      background: #f5f5f5;
+      margin: 0;
     }
 
-    #distance {
-      font-size: 2em;
-      margin: 20px 0;
+    h2 {
+      margin-bottom: 5px;
     }
 
     #status {
       color: gray;
       margin-bottom: 10px;
+      font-size: 0.9em;
+    }
+
+    #distance {
+      font-size: 2.5em;
+      font-weight: bold;
+      margin: 10px 0;
+    }
+
+    /* Compass container */
+    #compass-wrapper {
+      position: relative;
+      width: 180px;
+      height: 180px;
+      margin: 10px auto;
+    }
+
+    /* Outer ring – stays fixed, shows N/S/E/W */
+    #compass-ring {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 3px solid #ccc;
+      background: white;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .cardinal {
+      position: absolute;
+      font-size: 13px;
+      font-weight: bold;
+      color: #555;
+    }
+
+    .cardinal.n {
+      top: 6px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #c0392b;
+    }
+
+    .cardinal.s {
+      bottom: 6px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    .cardinal.e {
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    .cardinal.w {
+      left: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    /* Inner disc – rotates with device heading (so N always points north on screen) */
+    #compass-disc {
+      position: absolute;
+      inset: 20px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 40% 35%, #ecf0f1, #bdc3c7);
+      transition: transform 0.3s ease;
+    }
+
+    /* Arrow pointing to TARGET – rotates independently */
+    #compass-arrow-wrap {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      transition: transform 0.3s ease;
+    }
+
+    #compass-arrow {
+      position: absolute;
+      left: 50%;
+      top: 10px;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 9px solid transparent;
+      border-right: 9px solid transparent;
+      border-bottom: 60px solid #e74c3c;
+      filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+    }
+
+    #compass-arrow::after {
+      content: '';
+      position: absolute;
+      left: -9px;
+      top: 60px;
+      width: 0;
+      height: 0;
+      border-left: 9px solid transparent;
+      border-right: 9px solid transparent;
+      border-top: 40px solid #7f8c8d;
+    }
+
+    /* Center dot */
+    #compass-center {
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      background: #2c3e50;
+      border-radius: 50%;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 10;
+    }
+
+    #compass-label {
+      font-size: 0.8em;
+      color: #888;
+      margin-top: 4px;
     }
 
     #message {
-      font-size: 1.5em;
+      font-size: 1.4em;
       color: green;
       display: none;
+      margin: 10px 0;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
     }
 
     button {
-      font-size: 1.2em;
+      font-size: 1em;
       padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      background: #3498db;
+      color: white;
+      cursor: pointer;
+    }
+
+    button:active {
+      opacity: 0.8;
+    }
+
+    #btn-ios {
+      background: #8e44ad;
+      display: none;
+    }
+
+    #debug {
+      font-size: 0.75em;
+      color: #aaa;
+      margin-top: 8px;
     }
   </style>
 </head>
 
 <body>
 
-  <h2>Distance Tracker Hynek</h2>
+  <h2>Distance Tracker</h2>
+  <p id="status">Press Start to begin</p>
 
-  <p id="status">Press start to begin</p>
-  <button onclick="startTracking()">Start Tracking</button>
+  <div class="btn-row">
+    <button onclick="startTracking()">▶ Start</button>
+    <button id="btn-ios" onclick="requestIOSPermission()">🔓 Allow Compass (iOS)</button>
+  </div>
 
   <div id="distance">--</div>
-  <div id="message">🎉 You have arrived!</div>
+
+  <div id="compass-wrapper">
+    <!-- Static outer ring with cardinal labels -->
+    <div id="compass-ring">
+      <span class="cardinal n">N</span>
+      <span class="cardinal s">S</span>
+      <span class="cardinal e">E</span>
+      <span class="cardinal w">W</span>
+    </div>
+
+    <!-- Rotating disc (counter-rotates to keep N pointing up on screen) -->
+    <div id="compass-disc"></div>
+
+    <!-- Arrow pointing to target -->
+    <div id="compass-arrow-wrap">
+      <div id="compass-arrow"></div>
+    </div>
+
+    <!-- Center dot (always on top) -->
+    <div id="compass-center"></div>
+  </div>
+  <div id="compass-label">🔴 Pfeil zeigt zum Ziel</div>
+
+  <div id="message">🎉 Ziel erreicht!</div>
+  <div id="debug"></div>
 
   <script>
-    // 🔧 CHANGE THESE
+    // 🔧 HIER KOORDINATEN ANPASSEN
     const targetLat = 48.2082;
     const targetLon = 16.3738;
     const arrivalThreshold = 20; // meters
 
     let currentLat = null;
     let currentLon = null;
+    let deviceHeading = null; // degrees from north, clockwise
     let watchId = null;
 
-    function toRad(value) {
-      return value * Math.PI / 180;
-    }
+    // ── Helpers ──────────────────────────────────────────────────
 
-    // Haversine formula
+    function toRad(v) { return v * Math.PI / 180; }
+    function toDeg(v) { return v * 180 / Math.PI; }
+
     function getDistance(lat1, lon1, lat2, lon2) {
       const R = 6371000;
       const dLat = toRad(lat2 - lat1);
       const dLon = toRad(lon2 - lon1);
-
-      const a =
-        Math.sin(dLat / 2) ** 2 +
+      const a = Math.sin(dLat / 2) ** 2 +
         Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
         Math.sin(dLon / 2) ** 2;
-
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      return R * c;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
+
+    // Bearing from current position to target (degrees clockwise from north)
+    function getBearing(lat1, lon1, lat2, lon2) {
+      const dLon = toRad(lon2 - lon1);
+      const y = Math.sin(dLon) * Math.cos(toRad(lat2));
+      const x = Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) -
+        Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(dLon);
+      return (toDeg(Math.atan2(y, x)) + 360) % 360;
+    }
+
+    // ── UI Update ─────────────────────────────────────────────────
 
     function updateUI() {
       if (currentLat === null) {
-        document.getElementById("distance").innerText = "Getting location...";
+        document.getElementById("distance").innerText = "Lade Position…";
         return;
       }
 
-      const distance = getDistance(currentLat, currentLon, targetLat, targetLon);
+      const dist = getDistance(currentLat, currentLon, targetLat, targetLon);
+      document.getElementById("distance").innerText = dist.toFixed(1) + " m";
 
-      document.getElementById("distance").innerText =
-        distance.toFixed(1) + " m";
-
-      if (distance < arrivalThreshold) {
+      if (dist < arrivalThreshold) {
         document.getElementById("message").style.display = "block";
+      }
+
+      updateCompass();
+    }
+
+    function updateCompass() {
+      const arrowWrap = document.getElementById("compass-arrow-wrap");
+      const disc = document.getElementById("compass-disc");
+      const debug = document.getElementById("debug");
+
+      if (currentLat === null) return;
+
+      const bearing = getBearing(currentLat, currentLon, targetLat, targetLon);
+
+      if (deviceHeading !== null) {
+        // Arrow angle = bearing relative to where the device is pointing
+        const arrowAngle = (bearing - deviceHeading + 360) % 360;
+        arrowWrap.style.transform = `rotate(${arrowAngle}deg)`;
+        // Counter-rotate disc so N stays at top
+        disc.style.transform = `rotate(${-deviceHeading}deg)`;
+        debug.innerText = `Heading: ${deviceHeading.toFixed(0)}° | Bearing: ${bearing.toFixed(0)}° | Arrow: ${arrowAngle.toFixed(0)}°`;
+      } else {
+        // No heading available – just point arrow toward absolute bearing
+        arrowWrap.style.transform = `rotate(${bearing}deg)`;
+        disc.style.transform = `rotate(0deg)`;
+        debug.innerText = `Kein Kompass-Signal – Bearing: ${bearing.toFixed(0)}° (Orientierung unbekannt)`;
       }
     }
 
-    function handleError(error) {
-      console.log(error.code, error.message);
+    // ── Device Orientation ────────────────────────────────────────
 
-      let msg = "Error: ";
-      switch (error.code) {
-        case 1: msg += "Permission denied"; break;
-        case 2: msg += "Position unavailable"; break;
-        case 3: msg += "Timeout"; break;
-        default: msg += error.message;
+    function handleOrientation(event) {
+      let heading = null;
+
+      // iOS: webkitCompassHeading is already magnetic north, clockwise
+      if (event.webkitCompassHeading !== undefined && event.webkitCompassHeading !== null) {
+        heading = event.webkitCompassHeading;
+      } else if (event.alpha !== null) {
+        // Android: alpha is CCW from north in absolute mode
+        heading = (360 - event.alpha) % 360;
       }
 
-      document.getElementById("status").innerText = msg;
+      if (heading !== null) {
+        deviceHeading = heading;
+      }
+    }
+
+    function startOrientationListener() {
+      if (!window.DeviceOrientationEvent) {
+        document.getElementById("debug").innerText = "DeviceOrientation nicht unterstützt";
+        return;
+      }
+      window.addEventListener("deviceorientationabsolute", handleOrientation, true);
+      window.addEventListener("deviceorientation", handleOrientation, true);
+    }
+
+    // iOS 13+ requires explicit permission request from a user gesture
+    async function requestIOSPermission() {
+      if (typeof DeviceOrientationEvent.requestPermission === "function") {
+        try {
+          const result = await DeviceOrientationEvent.requestPermission();
+          if (result === "granted") {
+            startOrientationListener();
+            document.getElementById("btn-ios").style.display = "none";
+            document.getElementById("status").innerText = "Kompass aktiv ✓";
+          } else {
+            document.getElementById("status").innerText = "Kompass-Erlaubnis verweigert";
+          }
+        } catch (e) {
+          document.getElementById("status").innerText = "Fehler: " + e.message;
+        }
+      }
+    }
+
+    // ── GPS ───────────────────────────────────────────────────────
+
+    function handleError(error) {
+      const msgs = { 1: "Erlaubnis verweigert", 2: "Position nicht verfügbar", 3: "Timeout" };
+      document.getElementById("status").innerText = "GPS Fehler: " + (msgs[error.code] || error.message);
     }
 
     function startTracking() {
-      const status = document.getElementById("status");
-
       if (!navigator.geolocation) {
-        status.innerText = "Geolocation not supported";
+        document.getElementById("status").innerText = "Geolocation nicht unterstützt";
         return;
       }
+      document.getElementById("status").innerText = "Position wird ermittelt…";
 
-      status.innerText = "Requesting location...";
+      // Show iOS compass button if needed
+      if (typeof DeviceOrientationEvent !== "undefined" &&
+        typeof DeviceOrientationEvent.requestPermission === "function") {
+        document.getElementById("btn-ios").style.display = "inline-block";
+      } else {
+        startOrientationListener();
+      }
 
-      // STEP 1: Try single fix first (important for iOS)
       navigator.geolocation.getCurrentPosition(
-        (position) => {
-          currentLat = position.coords.latitude;
-          currentLon = position.coords.longitude;
+        (pos) => {
+          currentLat = pos.coords.latitude;
+          currentLon = pos.coords.longitude;
+          document.getElementById("status").innerText = "Tracking aktiv ✓";
 
-          status.innerText = "Tracking started";
-
-          // STEP 2: Start continuous tracking
           watchId = navigator.geolocation.watchPosition(
-            (pos) => {
-              currentLat = pos.coords.latitude;
-              currentLon = pos.coords.longitude;
-            },
+            (p) => { currentLat = p.coords.latitude; currentLon = p.coords.longitude; },
             handleError,
-            {
-              enableHighAccuracy: true,
-              timeout: 10000,
-              maximumAge: 0
-            }
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
           );
         },
-        (error) => {
-          handleError(error);
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 0
-        }
+        handleError,
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
     }
 
-    // Update distance every second
-    setInterval(updateUI, 1000);
+    setInterval(updateUI, 500);
   </script>
-
 </body>
 
 </html>
