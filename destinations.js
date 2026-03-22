@@ -26,6 +26,13 @@ const destinations = {
     threshold: 50,
     message: "Herzlich willkommen bei Schloss Schönbrunn!"
   }
+  "alois-ruhe": {
+    name: "Alois Edlinger Ruhe",
+    lat: 47.3651544,
+    lon: 15.0673987,
+    threshold: 50,
+    message: "HURRA JSME TAM!"
+  }
 
   // Neues Ziel hinzufügen:
   // ,"mein-ziel": {
