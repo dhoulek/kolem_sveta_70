@@ -212,6 +212,10 @@
   // Init on load
   document.addEventListener("DOMContentLoaded", function () {
     initSVG();
-    setInterval(updateCompass, 200);
+    function loop() {
+      updateCompass();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
   });
 })();
