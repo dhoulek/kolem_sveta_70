@@ -32,17 +32,22 @@
             margin-bottom: 20px;
         }
 
-        #distance {
-            font-size: 2.5em;
-            margin: 20px 0;
-            font-weight: bold;
-            color: #222;
-        }
-
         #status {
             color: gray;
             margin-bottom: 14px;
             font-size: 0.95em;
+        }
+
+        /* Compass */
+        #kompass-wrap {
+            margin: 16px auto 0;
+            width: 280px;
+            height: 280px;
+        }
+
+        #kompass-svg {
+            width: 100%;
+            height: 100%;
         }
 
         /* Buttons */
@@ -321,24 +326,6 @@
             border-radius: 50%;
             flex-shrink: 0;
         }
-
-        #compass {
-            width: 200px;
-            height: 200px;
-            border: 5px solid black;
-            border-radius: 50%;
-            position: relative;
-        }
-
-        #needle {
-            width: 4px;
-            height: 90px;
-            background: red;
-            position: absolute;
-            top: 10px;
-            left: 50%;
-            transform-origin: bottom;
-        }
     </style>
 </head>
 
@@ -354,14 +341,16 @@
     <div id="tracker">
         <h2 id="dest-title">Ziel</h2>
         <p class="subtitle" id="dest-coords"></p>
-        <p id="status">Press start to begin</p>
+        <p id="status">Start drücken um zu beginnen</p>
         <div class="btn-row">
-            <button class="start-btn" onclick="startTracking()">▶ Start Tracking</button>
-            <button class="map-btn" onclick="openMap()">🗺 Karte</button>
+            <button class="start-btn" onclick="startTracking()">&#9654; Start Tracking</button>
+            <button class="map-btn" onclick="openMap()">&#128506; Karte</button>
+            <button id="btn-ios"
+                style="display:none;font-size:1em;padding:10px 20px;background:#8e44ad;color:#fff;border:none;border-radius:8px;cursor:pointer;"
+                onclick="requestCompassPermission()">&#128275; Kompass erlauben</button>
         </div>
-        <div id="distance">--</div>
-        <div id="compass">
-            <div id="needle"></div>
+        <div id="kompass-wrap">
+            <svg id="kompass-svg" viewBox="0 0 280 280" xmlns="http://www.w3.org/2000/svg"></svg>
         </div>
     </div>
 
@@ -420,6 +409,8 @@
 
     <!-- Ziele aus externer Datei laden -->
     <script src="destinations.js"></script>
+    <!-- Kompass -->
+    <script src="kompass.js"></script>
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
@@ -455,12 +446,8 @@
         // ── UI update ─────────────────────────────────────────────────
 
         function updateUI() {
-            if (!activeDest || currentLat === null) {
-                document.getElementById("distance").innerText = "Getting location...";
-                return;
-            }
+            if (!activeDest || currentLat === null) return;
             const d = getDistance(currentLat, currentLon, activeDest.lat, activeDest.lon);
-            document.getElementById("distance").innerText = d.toFixed(1) + " m";
             if (d < activeDest.threshold && !arrived) {
                 arrived = true;
                 showPopup(d);
@@ -479,6 +466,7 @@
             if (!navigator.geolocation) { status.innerText = "Geolocation not supported"; return; }
             status.innerText = "Position wird ermittelt...";
             arrived = false;
+            checkIOSCompass();
             navigator.geolocation.getCurrentPosition(pos => {
                 currentLat = pos.coords.latitude;
                 currentLon = pos.coords.longitude;
@@ -648,7 +636,6 @@
 
         init();
     </script>
-    <script src="compass.js"></script>
 </body>
 
 </html>
