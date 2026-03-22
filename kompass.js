@@ -1,6 +1,6 @@
-// kompass.js – Kompass-Logik für index.html
-// Erwartet: activeDest, currentLat, currentLon (aus index.html)
-// Erwartet: SVG-Element mit id="kompass-svg" im DOM
+// kompass.js – Compass logic for index.html
+// Requires: activeDest, currentLat, currentLon from index.html
+// Requires: SVG element with id="kompass-svg" in the DOM
 
 (function () {
   const CX = 140, CY = 140, R_OUTER = 130, R_INNER = 116;
@@ -46,7 +46,7 @@
     }));
 
     // 16 ticks: 4 cardinal (big) + 3 minor between each
-    const cardinals = { 0: "N", 90: "O", 180: "S", 270: "W" };
+    const cardinals = { 0: "S", 90: "V", 180: "J", 270: "Z" };
     for (let i = 0; i < 16; i++) {
       const angleDeg = i * 22.5;
       const rad = toRad(angleDeg - 90);
@@ -78,12 +78,6 @@
         group.appendChild(lbl);
       }
     }
-
-    // Inner decorative ring
-    group.appendChild(svgEl("circle", {
-      cx: CX, cy: CY, r: R_INNER - 14,
-      fill: "none", stroke: "#ddd", "stroke-width": "1"
-    }));
   }
 
   function initSVG() {
@@ -103,7 +97,7 @@
     });
     svg.appendChild(dotEl);
 
-    // Distance value
+    // Distance value text
     distTextEl = svgEl("text", {
       x: CX, y: CY - 12,
       "text-anchor": "middle",
@@ -115,7 +109,7 @@
     distTextEl.textContent = "--";
     svg.appendChild(distTextEl);
 
-    // Unit label
+    // Unit label text
     unitTextEl = svgEl("text", {
       x: CX, y: CY + 20,
       "text-anchor": "middle",
@@ -130,12 +124,10 @@
   function updateCompass() {
     if (!ringGroupEl) return;
 
-    // Distance + unit
+    // Update distance and unit label
     if (typeof currentLat !== "undefined" && currentLat !== null &&
       typeof activeDest !== "undefined" && activeDest !== null) {
-
       const dist = getDistance(currentLat, currentLon, activeDest.lat, activeDest.lon);
-
       if (dist >= 1000) {
         distTextEl.textContent = (dist / 1000).toFixed(2);
         unitTextEl.textContent = "km";
@@ -149,7 +141,7 @@
     const heading = deviceHeading !== null ? deviceHeading : 0;
     ringGroupEl.setAttribute("transform", `rotate(${-heading}, ${CX}, ${CY})`);
 
-    // Red dot: bearing to destination, corrected for device heading
+    // Move red dot to bearing toward destination, corrected for device heading
     let dotAngle = 0;
     if (typeof currentLat !== "undefined" && currentLat !== null &&
       typeof activeDest !== "undefined" && activeDest !== null) {
@@ -163,53 +155,25 @@
     dotEl.setAttribute("cy", CY + dotR * Math.sin(dotRad));
   }
 
-  // Device orientation
+  // Handle device orientation events
   function handleOrientation(e) {
     if (e.webkitCompassHeading != null) {
-      deviceHeading = e.webkitCompassHeading;
+      deviceHeading = e.webkitCompassHeading;                 // iOS
     } else if (e.absolute && e.alpha != null) {
-      deviceHeading = (360 - e.alpha) % 360;
+      deviceHeading = (360 - e.alpha) % 360;                 // Android absolute
     } else if (e.alpha != null && deviceHeading === null) {
-      deviceHeading = (360 - e.alpha) % 360;
+      deviceHeading = (360 - e.alpha) % 360;                 // fallback
     }
   }
 
-  // Public: called from index.html after GPS starts
+  // Called from index.html to start listening to device orientation
   window.startCompassOrientation = function () {
     if (!window.DeviceOrientationEvent) return;
     window.addEventListener("deviceorientationabsolute", handleOrientation, true);
     window.addEventListener("deviceorientation", handleOrientation, true);
   };
 
-  // iOS permission button handler
-  window.requestCompassPermission = async function () {
-    if (typeof DeviceOrientationEvent.requestPermission === "function") {
-      try {
-        const result = await DeviceOrientationEvent.requestPermission();
-        if (result === "granted") {
-          window.startCompassOrientation();
-          document.getElementById("btn-ios").style.display = "none";
-          document.getElementById("status").innerText = "Kompass aktiv";
-        } else {
-          document.getElementById("status").innerText = "Kompass-Erlaubnis verweigert";
-        }
-      } catch (e) {
-        document.getElementById("status").innerText = "Fehler: " + e.message;
-      }
-    }
-  };
-
-  // Show iOS button if needed
-  window.checkIOSCompass = function () {
-    if (typeof DeviceOrientationEvent !== "undefined" &&
-      typeof DeviceOrientationEvent.requestPermission === "function") {
-      document.getElementById("btn-ios").style.display = "inline-block";
-    } else {
-      window.startCompassOrientation();
-    }
-  };
-
-  // Init on load
+  // Init SVG and start animation loop on page load
   document.addEventListener("DOMContentLoaded", function () {
     initSVG();
     function loop() {

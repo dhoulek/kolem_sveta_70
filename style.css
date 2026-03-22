@@ -1,0 +1,323 @@
+/* =============================================================
+   style.css – GPS Tracker Styles
+   ============================================================= */
+
+
+/* ── Reset & Base ────────────────────────────────────────── */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: sans-serif;
+  text-align: center;
+  padding: 20px;
+  margin: 0;
+  background: #f5f5f5;
+}
+
+h2 {
+  margin-bottom: 4px;
+}
+
+.subtitle {
+  color: #888;
+  font-size: 0.9em;
+  margin-bottom: 20px;
+}
+
+#status {
+  color: gray;
+  margin-bottom: 14px;
+  font-size: 0.95em;
+}
+
+
+/* ── Buttons ─────────────────────────────────────────────── */
+
+.btn-row {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+button.map-btn {
+  font-size: 1em;
+  padding: 10px 20px;
+  background: #27ae60;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+button.map-btn:hover {
+  background: #219150;
+}
+
+
+/* ── Compass ─────────────────────────────────────────────── */
+
+#kompass-wrap {
+  margin: 16px auto 0;
+  width: 280px;
+  height: 280px;
+}
+
+#kompass-svg {
+  width: 100%;
+  height: 100%;
+}
+
+
+/* ── Destination list (index page) ──────────────────────── */
+
+#dest-list {
+  display: none;
+}
+
+.dest-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin: 10px auto;
+  max-width: 420px;
+  text-align: left;
+  border: 1px solid #e0e0e0;
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  transition: box-shadow 0.15s;
+}
+
+.dest-card:hover {
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+}
+
+.dest-card strong {
+  font-size: 1.1em;
+}
+
+.dest-card span {
+  font-size: 0.8em;
+  color: #999;
+  display: block;
+  margin-top: 4px;
+}
+
+
+/* ── Tracker page ────────────────────────────────────────── */
+
+#tracker {
+  display: none;
+}
+
+
+/* ── Not found page ──────────────────────────────────────── */
+
+#not-found {
+  display: none;
+}
+
+#not-found h2 {
+  color: #c0392b;
+}
+
+#not-found a {
+  color: #3498db;
+  text-decoration: none;
+}
+
+#not-found pre {
+  background: #fff;
+  border-radius: 10px;
+  padding: 16px;
+  text-align: left;
+  display: inline-block;
+  font-size: 0.85em;
+  border: 1px solid #ddd;
+  max-width: 480px;
+  width: 90%;
+}
+
+
+/* ── Arrival popup ───────────────────────────────────────── */
+
+#overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+}
+
+#overlay.visible {
+  display: flex;
+}
+
+#popup {
+  background: #fff;
+  border-radius: 16px;
+  padding: 36px 32px 28px;
+  max-width: 320px;
+  width: 90%;
+  text-align: center;
+  animation: popIn 0.25s ease;
+}
+
+@keyframes popIn {
+  from {
+    transform: scale(0.85);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+#popup .icon {
+  font-size: 3em;
+  margin-bottom: 12px;
+}
+
+#popup h2 {
+  margin: 0 0 10px;
+  font-size: 1.4em;
+  color: #222;
+}
+
+#popup p {
+  margin: 0 0 24px;
+  color: #555;
+  font-size: 1em;
+  line-height: 1.5;
+}
+
+#popup button {
+  background: #28a745;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 28px;
+  font-size: 1em;
+  cursor: pointer;
+}
+
+#popup button:hover {
+  background: #218838;
+}
+
+
+/* ── Map modal ───────────────────────────────────────────── */
+
+#map-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+
+#map-modal.open {
+  display: flex;
+}
+
+#map-box {
+  background: white;
+  border-radius: 12px;
+  width: 96vw;
+  max-width: 520px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+}
+
+#map-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: #2c3e50;
+  color: white;
+  flex-shrink: 0;
+}
+
+#map-header span {
+  font-weight: bold;
+  font-size: 1em;
+}
+
+#map-close {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1.5em;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+#map-layer-btns {
+  display: flex;
+  gap: 6px;
+  padding: 8px 12px;
+  background: #34495e;
+  flex-shrink: 0;
+}
+
+.layer-btn {
+  font-size: 0.78em;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background: #4a6278;
+  color: white;
+  cursor: pointer;
+}
+
+.layer-btn.active {
+  background: #27ae60;
+  border-color: #2ecc71;
+}
+
+#leaflet-map {
+  width: 100%;
+  height: 55vw;
+  max-height: 340px;
+  min-height: 220px;
+}
+
+#map-legend {
+  padding: 7px 14px;
+  font-size: 0.75em;
+  color: #555;
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  flex-wrap: wrap;
+  border-top: 1px solid #eee;
+  flex-shrink: 0;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.legend-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
