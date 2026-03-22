@@ -321,6 +321,24 @@
             border-radius: 50%;
             flex-shrink: 0;
         }
+
+        #compass {
+            width: 200px;
+            height: 200px;
+            border: 5px solid black;
+            border-radius: 50%;
+            position: relative;
+        }
+
+        #needle {
+            width: 4px;
+            height: 90px;
+            background: red;
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform-origin: bottom;
+        }
     </style>
 </head>
 
@@ -342,6 +360,9 @@
             <button class="map-btn" onclick="openMap()">🗺 Karte</button>
         </div>
         <div id="distance">--</div>
+        <div id="compass">
+            <div id="needle"></div>
+        </div>
     </div>
 
     <!-- Not found -->
@@ -627,6 +648,7 @@
 
         init();
     </script>
+    <script src="compass.js"></script>
 </body>
 
 </html>
