@@ -2,634 +2,631 @@
 <html>
 
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GPS Distance Tracker</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPS Distance Tracker</title>
 
-  <!-- Leaflet CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
-  <style>
-    * {
-      box-sizing: border-box;
-    }
+    <style>
+        * {
+            box-sizing: border-box;
+        }
 
-    body {
-      font-family: sans-serif;
-      text-align: center;
-      padding: 20px;
-      background: #f5f5f5;
-      margin: 0;
-    }
+        body {
+            font-family: sans-serif;
+            text-align: center;
+            padding: 20px;
+            margin: 0;
+            background: #f5f5f5;
+        }
 
-    h2 {
-      margin-bottom: 5px;
-    }
+        h2 {
+            margin-bottom: 4px;
+        }
 
-    #status {
-      color: gray;
-      margin-bottom: 10px;
-      font-size: 0.9em;
-    }
+        .subtitle {
+            color: #888;
+            font-size: 0.9em;
+            margin-bottom: 20px;
+        }
 
-    #distance {
-      font-size: 2.5em;
-      font-weight: bold;
-      margin: 10px 0;
-    }
+        #distance {
+            font-size: 2.5em;
+            margin: 20px 0;
+            font-weight: bold;
+            color: #222;
+        }
 
-    #compass-wrapper {
-      position: relative;
-      width: 180px;
-      height: 180px;
-      margin: 10px auto;
-    }
+        #status {
+            color: gray;
+            margin-bottom: 14px;
+            font-size: 0.95em;
+        }
 
-    #compass-ring {
-      position: absolute;
-      inset: 0;
-      border-radius: 50%;
-      border: 3px solid #ccc;
-      background: white;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    }
+        /* Buttons */
+        .btn-row {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
 
-    .cardinal {
-      position: absolute;
-      font-size: 13px;
-      font-weight: bold;
-      color: #555;
-    }
+        button.start-btn {
+            font-size: 1em;
+            padding: 10px 20px;
+            background: #28a745;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
 
-    .cardinal.n {
-      top: 6px;
-      left: 50%;
-      transform: translateX(-50%);
-      color: #c0392b;
-    }
+        button.start-btn:hover {
+            background: #218838;
+        }
 
-    .cardinal.s {
-      bottom: 6px;
-      left: 50%;
-      transform: translateX(-50%);
-    }
+        button.map-btn {
+            font-size: 1em;
+            padding: 10px 20px;
+            background: #27ae60;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
 
-    .cardinal.e {
-      right: 8px;
-      top: 50%;
-      transform: translateY(-50%);
-    }
+        button.map-btn:hover {
+            background: #219150;
+        }
 
-    .cardinal.w {
-      left: 8px;
-      top: 50%;
-      transform: translateY(-50%);
-    }
+        /* Not found */
+        #not-found {
+            display: none;
+        }
 
-    #compass-disc {
-      position: absolute;
-      inset: 20px;
-      border-radius: 50%;
-      background: radial-gradient(circle at 40% 35%, #ecf0f1, #bdc3c7);
-      transition: transform 0.3s ease;
-    }
+        #not-found h2 {
+            color: #c0392b;
+        }
 
-    #compass-arrow-wrap {
-      position: absolute;
-      inset: 0;
-      border-radius: 50%;
-      transition: transform 0.3s ease;
-    }
+        #not-found a {
+            color: #3498db;
+            text-decoration: none;
+        }
 
-    #compass-arrow {
-      position: absolute;
-      left: 50%;
-      top: 10px;
-      transform: translateX(-50%);
-      width: 0;
-      height: 0;
-      border-left: 9px solid transparent;
-      border-right: 9px solid transparent;
-      border-bottom: 60px solid #e74c3c;
-      filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
-    }
+        #not-found pre {
+            background: #fff;
+            border-radius: 10px;
+            padding: 16px;
+            text-align: left;
+            display: inline-block;
+            font-size: 0.85em;
+            border: 1px solid #ddd;
+            max-width: 480px;
+            width: 90%;
+        }
 
-    #compass-arrow::after {
-      content: '';
-      position: absolute;
-      left: -9px;
-      top: 60px;
-      width: 0;
-      height: 0;
-      border-left: 9px solid transparent;
-      border-right: 9px solid transparent;
-      border-top: 40px solid #7f8c8d;
-    }
+        /* Destination list */
+        #dest-list {
+            display: none;
+        }
 
-    #compass-center {
-      position: absolute;
-      width: 14px;
-      height: 14px;
-      background: #2c3e50;
-      border-radius: 50%;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      z-index: 10;
-    }
+        .dest-card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin: 10px auto;
+            max-width: 420px;
+            text-align: left;
+            border: 1px solid #e0e0e0;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+            transition: box-shadow 0.15s;
+        }
 
-    #compass-label {
-      font-size: 0.8em;
-      color: #888;
-      margin-top: 4px;
-    }
+        .dest-card:hover {
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+        }
 
-    #message {
-      font-size: 1.4em;
-      color: green;
-      display: none;
-      margin: 10px 0;
-    }
+        .dest-card strong {
+            font-size: 1.1em;
+        }
 
-    .btn-row {
-      display: flex;
-      gap: 10px;
-      justify-content: center;
-      flex-wrap: wrap;
-      margin-bottom: 10px;
-    }
+        .dest-card span {
+            font-size: 0.8em;
+            color: #999;
+            display: block;
+            margin-top: 4px;
+        }
 
-    button {
-      font-size: 1em;
-      padding: 10px 20px;
-      border: none;
-      border-radius: 8px;
-      background: #3498db;
-      color: white;
-      cursor: pointer;
-    }
+        /* Tracker page */
+        #tracker {
+            display: none;
+        }
 
-    button:active {
-      opacity: 0.8;
-    }
+        /* Arrival popup overlay */
+        #overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.55);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
 
-    #btn-ios {
-      background: #8e44ad;
-      display: none;
-    }
+        #overlay.visible {
+            display: flex;
+        }
 
-    #btn-map {
-      background: #27ae60;
-    }
+        #popup {
+            background: #fff;
+            border-radius: 16px;
+            padding: 36px 32px 28px;
+            max-width: 320px;
+            width: 90%;
+            text-align: center;
+            animation: popIn 0.25s ease;
+        }
 
-    #debug {
-      font-size: 0.75em;
-      color: #aaa;
-      margin-top: 8px;
-    }
+        @keyframes popIn {
+            from {
+                transform: scale(0.85);
+                opacity: 0;
+            }
 
-    /* ── Map Modal ── */
-    #map-modal {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.65);
-      z-index: 1000;
-      align-items: center;
-      justify-content: center;
-    }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
 
-    #map-modal.open {
-      display: flex;
-    }
+        #popup .icon {
+            font-size: 3em;
+            margin-bottom: 12px;
+        }
 
-    #map-box {
-      background: white;
-      border-radius: 12px;
-      width: 96vw;
-      max-width: 520px;
-      overflow: hidden;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-      display: flex;
-      flex-direction: column;
-    }
+        #popup h2 {
+            margin: 0 0 10px;
+            font-size: 1.4em;
+            color: #222;
+        }
 
-    #map-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px 14px;
-      background: #2c3e50;
-      color: white;
-      flex-shrink: 0;
-    }
+        #popup p {
+            margin: 0 0 24px;
+            color: #555;
+            font-size: 1em;
+            line-height: 1.5;
+        }
 
-    #map-header span {
-      font-weight: bold;
-      font-size: 1em;
-    }
+        #popup button {
+            background: #28a745;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 28px;
+            font-size: 1em;
+            cursor: pointer;
+        }
 
-    #map-close {
-      background: none;
-      border: none;
-      color: white;
-      font-size: 1.5em;
-      cursor: pointer;
-      padding: 0 4px;
-      line-height: 1;
-    }
+        #popup button:hover {
+            background: #218838;
+        }
 
-    /* Layer toggle buttons */
-    #map-layer-btns {
-      display: flex;
-      gap: 6px;
-      padding: 8px 12px;
-      background: #34495e;
-      flex-shrink: 0;
-    }
+        /* Map Modal */
+        #map-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.65);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
 
-    .layer-btn {
-      font-size: 0.78em;
-      padding: 5px 10px;
-      border-radius: 6px;
-      border: 2px solid transparent;
-      background: #4a6278;
-      color: white;
-      cursor: pointer;
-    }
+        #map-modal.open {
+            display: flex;
+        }
 
-    .layer-btn.active {
-      background: #27ae60;
-      border-color: #2ecc71;
-    }
+        #map-box {
+            background: white;
+            border-radius: 12px;
+            width: 96vw;
+            max-width: 520px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            display: flex;
+            flex-direction: column;
+        }
 
-    /* Leaflet map container */
-    #leaflet-map {
-      width: 100%;
-      height: 55vw;
-      max-height: 340px;
-      min-height: 220px;
-    }
+        #map-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 14px;
+            background: #2c3e50;
+            color: white;
+            flex-shrink: 0;
+        }
 
-    #map-legend {
-      padding: 7px 14px;
-      font-size: 0.75em;
-      color: #555;
-      display: flex;
-      gap: 14px;
-      justify-content: center;
-      flex-wrap: wrap;
-      border-top: 1px solid #eee;
-      flex-shrink: 0;
-    }
+        #map-header span {
+            font-weight: bold;
+            font-size: 1em;
+        }
 
-    .legend-item {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-    }
+        #map-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5em;
+            cursor: pointer;
+            padding: 0 4px;
+            line-height: 1;
+        }
 
-    .legend-dot {
-      width: 11px;
-      height: 11px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-  </style>
+        #map-layer-btns {
+            display: flex;
+            gap: 6px;
+            padding: 8px 12px;
+            background: #34495e;
+            flex-shrink: 0;
+        }
+
+        .layer-btn {
+            font-size: 0.78em;
+            padding: 5px 10px;
+            border-radius: 6px;
+            border: 2px solid transparent;
+            background: #4a6278;
+            color: white;
+            cursor: pointer;
+        }
+
+        .layer-btn.active {
+            background: #27ae60;
+            border-color: #2ecc71;
+        }
+
+        #leaflet-map {
+            width: 100%;
+            height: 55vw;
+            max-height: 340px;
+            min-height: 220px;
+        }
+
+        #map-legend {
+            padding: 7px 14px;
+            font-size: 0.75em;
+            color: #555;
+            display: flex;
+            gap: 14px;
+            justify-content: center;
+            flex-wrap: wrap;
+            border-top: 1px solid #eee;
+            flex-shrink: 0;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .legend-dot {
+            width: 11px;
+            height: 11px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+    </style>
 </head>
 
 <body>
 
-  <h2>Distance Tracker</h2>
-  <p id="status">Press Start to begin</p>
-
-  <div class="btn-row">
-    <button onclick="startTracking()">&#9654; Start</button>
-    <button id="btn-map" onclick="openMap()">&#128506; Map</button>
-    <button id="btn-ios" onclick="requestIOSPermission()">&#128275; Allow Compass (iOS)</button>
-  </div>
-
-  <!-- Map Modal -->
-  <div id="map-modal" onclick="closeMapOutside(event)">
-    <div id="map-box">
-      <div id="map-header">
-        <span>&#128506; Satellitenkarte</span>
-        <button id="map-close" onclick="closeMap()">&#x2715;</button>
-      </div>
-
-      <!-- Layer toggle -->
-      <div id="map-layer-btns">
-        <button class="layer-btn active" id="btn-satellite" onclick="setLayer('satellite')">&#128752; Satellit</button>
-        <button class="layer-btn" id="btn-street" onclick="setLayer('street')">&#128205; Karte</button>
-        <button class="layer-btn" id="btn-topo" onclick="setLayer('topo')">&#9968; Topo</button>
-      </div>
-
-      <!-- Leaflet map -->
-      <div id="leaflet-map"></div>
-
-      <div id="map-legend">
-        <div class="legend-item">
-          <div class="legend-dot" style="background:#3498db"></div> Meine Position
-        </div>
-        <div class="legend-item">
-          <div class="legend-dot" style="background:#e74c3c"></div> Ziel
-        </div>
-        <div class="legend-item">
-          <svg width="22" height="8" style="flex-shrink:0">
-            <line x1="0" y1="4" x2="22" y2="4" stroke="#e74c3c" stroke-width="2" stroke-dasharray="4,3" />
-          </svg>
-          Luftlinie
-        </div>
-      </div>
+    <!-- Index page -->
+    <div id="dest-list">
+        <h2>GPS Tracker</h2>
+        <p class="subtitle">Wähle ein Ziel:</p>
     </div>
-  </div>
 
-  <div id="distance">--</div>
-
-  <div id="compass-wrapper">
-    <div id="compass-ring">
-      <span class="cardinal n">N</span>
-      <span class="cardinal s">S</span>
-      <span class="cardinal e">E</span>
-      <span class="cardinal w">W</span>
+    <!-- Tracker page -->
+    <div id="tracker">
+        <h2 id="dest-title">Ziel</h2>
+        <p class="subtitle" id="dest-coords"></p>
+        <p id="status">Press start to begin</p>
+        <div class="btn-row">
+            <button class="start-btn" onclick="startTracking()">▶ Start Tracking</button>
+            <button class="map-btn" onclick="openMap()">🗺 Karte</button>
+        </div>
+        <div id="distance">--</div>
     </div>
-    <div id="compass-disc"></div>
-    <div id="compass-arrow-wrap">
-      <div id="compass-arrow"></div>
+
+    <!-- Not found -->
+    <div id="not-found">
+        <h2>Ziel nicht gefunden</h2>
+        <p>Das Ziel <strong id="missing-key"></strong> existiert nicht.<br>
+            <a href="?">→ Alle Ziele anzeigen</a>
+        </p>
+        <p style="margin-top:24px; color:#555; font-size:0.95em;">
+            So fügst du ein neues Ziel in <code>destinations.js</code> hinzu:
+        </p>
+        <pre id="code-hint"></pre>
     </div>
-    <div id="compass-center"></div>
-  </div>
-  <div id="compass-label">&#128308; Pfeil zeigt zum Ziel</div>
 
-  <div id="message">&#127881; Ziel erreicht!</div>
-  <div id="debug"></div>
+    <!-- Arrival Popup -->
+    <div id="overlay">
+        <div id="popup">
+            <div class="icon">🎉</div>
+            <h2>Angekommen!</h2>
+            <p id="popup-message"></p>
+            <p style="font-size:0.85em; color:#999;" id="popupDist"></p>
+            <button onclick="closePopup()">OK, verstanden!</button>
+        </div>
+    </div>
 
-  <!-- Leaflet JS -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Map Modal -->
+    <div id="map-modal" onclick="closeMapOutside(event)">
+        <div id="map-box">
+            <div id="map-header">
+                <span>🗺 Karte</span>
+                <button id="map-close" onclick="closeMap()">&#x2715;</button>
+            </div>
+            <div id="map-layer-btns">
+                <button class="layer-btn active" id="btn-satellite" onclick="setLayer('satellite')">🛰 Satellit</button>
+                <button class="layer-btn" id="btn-street" onclick="setLayer('street')">📍 Karte</button>
+                <button class="layer-btn" id="btn-topo" onclick="setLayer('topo')">⛰ Topo</button>
+            </div>
+            <div id="leaflet-map"></div>
+            <div id="map-legend">
+                <div class="legend-item">
+                    <div class="legend-dot" style="background:#3498db"></div> Meine Position
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot" style="background:#e74c3c"></div> Ziel
+                </div>
+                <div class="legend-item">
+                    <svg width="22" height="8" style="flex-shrink:0">
+                        <line x1="0" y1="4" x2="22" y2="4" stroke="#e74c3c" stroke-width="2" stroke-dasharray="4,3" />
+                    </svg>
+                    Luftlinie
+                </div>
+            </div>
+        </div>
+    </div>
 
-  <script>
-    // KOORDINATEN ANPASSEN
-    const targetLat = 48.2082;
-    const targetLon = 16.3738;
-    const arrivalThreshold = 20;
+    <!-- Ziele aus externer Datei laden -->
+    <script src="destinations.js"></script>
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-    let currentLat = null;
-    let currentLon = null;
-    let deviceHeading = null;
-    let watchId = null;
+    <script>
+        let currentLat = null, currentLon = null;
+        let watchId = null, arrived = false;
+        let activeDest = null;
 
-    // ── Helpers ──────────────────────────────────────────────────
+        // ── Helpers ──────────────────────────────────────────────────
 
-    function toRad(v) { return v * Math.PI / 180; }
-    function toDeg(v) { return v * 180 / Math.PI; }
+        function toRad(v) { return v * Math.PI / 180; }
 
-    function getDistance(lat1, lon1, lat2, lon2) {
-      const R = 6371000;
-      const dLat = toRad(lat2 - lat1);
-      const dLon = toRad(lon2 - lon1);
-      const a = Math.sin(dLat / 2) ** 2 +
-        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-        Math.sin(dLon / 2) ** 2;
-      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    }
-
-    function getBearing(lat1, lon1, lat2, lon2) {
-      const dLon = toRad(lon2 - lon1);
-      const y = Math.sin(dLon) * Math.cos(toRad(lat2));
-      const x = Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) -
-        Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(dLon);
-      return (toDeg(Math.atan2(y, x)) + 360) % 360;
-    }
-
-    // ── UI ────────────────────────────────────────────────────────
-
-    function updateUI() {
-      if (currentLat === null) {
-        document.getElementById("distance").innerText = "Lade Position...";
-        return;
-      }
-      const dist = getDistance(currentLat, currentLon, targetLat, targetLon);
-      document.getElementById("distance").innerText = dist.toFixed(1) + " m";
-      if (dist < arrivalThreshold) document.getElementById("message").style.display = "block";
-      updateCompass();
-    }
-
-    function updateCompass() {
-      const arrowWrap = document.getElementById("compass-arrow-wrap");
-      const disc = document.getElementById("compass-disc");
-      const debug = document.getElementById("debug");
-      if (currentLat === null) return;
-      const bearing = getBearing(currentLat, currentLon, targetLat, targetLon);
-      if (deviceHeading !== null) {
-        const arrowAngle = (bearing - deviceHeading + 360) % 360;
-        arrowWrap.style.transform = "rotate(" + arrowAngle + "deg)";
-        disc.style.transform = "rotate(" + (-deviceHeading) + "deg)";
-        debug.innerText = "Heading: " + deviceHeading.toFixed(0) + " | Bearing: " + bearing.toFixed(0) + " | Arrow: " + arrowAngle.toFixed(0);
-      } else {
-        arrowWrap.style.transform = "rotate(" + bearing + "deg)";
-        disc.style.transform = "rotate(0deg)";
-        debug.innerText = "Kein Kompass – Bearing: " + bearing.toFixed(0);
-      }
-    }
-
-    // ── Device Orientation ────────────────────────────────────────
-
-    function handleOrientation(event) {
-      let heading = null;
-      if (event.webkitCompassHeading !== undefined && event.webkitCompassHeading !== null) {
-        heading = event.webkitCompassHeading;
-      } else if (event.alpha !== null) {
-        heading = (360 - event.alpha) % 360;
-      }
-      if (heading !== null) deviceHeading = heading;
-    }
-
-    function startOrientationListener() {
-      if (!window.DeviceOrientationEvent) return;
-      window.addEventListener("deviceorientationabsolute", handleOrientation, true);
-      window.addEventListener("deviceorientation", handleOrientation, true);
-    }
-
-    async function requestIOSPermission() {
-      if (typeof DeviceOrientationEvent.requestPermission === "function") {
-        try {
-          const result = await DeviceOrientationEvent.requestPermission();
-          if (result === "granted") {
-            startOrientationListener();
-            document.getElementById("btn-ios").style.display = "none";
-            document.getElementById("status").innerText = "Kompass aktiv";
-          } else {
-            document.getElementById("status").innerText = "Kompass-Erlaubnis verweigert";
-          }
-        } catch (e) {
-          document.getElementById("status").innerText = "Fehler: " + e.message;
+        function getDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371000;
+            const dLat = toRad(lat2 - lat1);
+            const dLon = toRad(lon2 - lon1);
+            const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         }
-      }
-    }
 
-    // ── GPS ───────────────────────────────────────────────────────
+        // ── Arrival Popup ─────────────────────────────────────────────
 
-    function handleError(error) {
-      const msgs = { 1: "Erlaubnis verweigert", 2: "Position nicht verfuegbar", 3: "Timeout" };
-      document.getElementById("status").innerText = "GPS Fehler: " + (msgs[error.code] || error.message);
-    }
-
-    function startTracking() {
-      if (!navigator.geolocation) {
-        document.getElementById("status").innerText = "Geolocation nicht unterstuetzt";
-        return;
-      }
-      document.getElementById("status").innerText = "Position wird ermittelt...";
-      if (typeof DeviceOrientationEvent !== "undefined" &&
-        typeof DeviceOrientationEvent.requestPermission === "function") {
-        document.getElementById("btn-ios").style.display = "inline-block";
-      } else {
-        startOrientationListener();
-      }
-      navigator.geolocation.getCurrentPosition(
-        function (pos) {
-          currentLat = pos.coords.latitude;
-          currentLon = pos.coords.longitude;
-          document.getElementById("status").innerText = "Tracking aktiv";
-          watchId = navigator.geolocation.watchPosition(
-            function (p) {
-              currentLat = p.coords.latitude;
-              currentLon = p.coords.longitude;
-              updateMyMarker();
-            },
-            handleError,
-            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-          );
-        },
-        handleError,
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-      );
-    }
-
-    setInterval(updateUI, 500);
-
-    // ── Leaflet Map ───────────────────────────────────────────────
-
-    let leafletMap = null;
-    let myMarker = null;
-    let targetMarker = null;
-    let luftlinie = null;
-    let currentLayer = 'satellite';
-
-    const tileLayers = {
-      satellite: L.tileLayer(
-        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-        { attribution: 'Tiles &copy; Esri', maxZoom: 19 }
-      ),
-      street: L.tileLayer(
-        'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-        { attribution: '&copy; OpenStreetMap contributors', maxZoom: 19 }
-      ),
-      topo: L.tileLayer(
-        'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
-        { attribution: '&copy; OpenTopoMap', maxZoom: 17 }
-      )
-    };
-
-    // Custom marker icons
-    const blueIcon = L.divIcon({
-      className: '',
-      html: '<div style="width:18px;height:18px;background:#3498db;border:3px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.4)"></div>',
-      iconSize: [18, 18],
-      iconAnchor: [9, 9]
-    });
-
-    const redIcon = L.divIcon({
-      className: '',
-      html: '<div style="width:18px;height:18px;background:#e74c3c;border:3px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.4)"></div>',
-      iconSize: [18, 18],
-      iconAnchor: [9, 9]
-    });
-
-    function initMap() {
-      if (leafletMap) return; // already initialized
-
-      const myLat = currentLat !== null ? currentLat : targetLat + 0.02;
-      const myLon = currentLon !== null ? currentLon : targetLon + 0.02;
-
-      // Center between both points
-      const centerLat = (myLat + targetLat) / 2;
-      const centerLon = (myLon + targetLon) / 2;
-
-      leafletMap = L.map('leaflet-map', { zoomControl: true }).setView([centerLat, centerLon], 14);
-
-      // Add default satellite layer
-      tileLayers.satellite.addTo(leafletMap);
-
-      // Target marker
-      targetMarker = L.marker([targetLat, targetLon], { icon: redIcon })
-        .addTo(leafletMap)
-        .bindPopup('<b>Ziel</b><br>' + targetLat.toFixed(5) + ', ' + targetLon.toFixed(5));
-
-      // My position marker
-      myMarker = L.marker([myLat, myLon], { icon: blueIcon })
-        .addTo(leafletMap)
-        .bindPopup(currentLat !== null ? '<b>Meine Position</b>' : '<b>Meine Position</b><br>(Demo)');
-
-      // Luftlinie
-      luftlinie = L.polyline(
-        [[myLat, myLon], [targetLat, targetLon]],
-        { color: '#e74c3c', weight: 2.5, dashArray: '7, 6', opacity: 0.9 }
-      ).addTo(leafletMap);
-
-      // Fit both markers in view
-      fitMap(myLat, myLon);
-    }
-
-    function fitMap(myLat, myLon) {
-      if (!leafletMap) return;
-      const bounds = L.latLngBounds(
-        [[myLat, myLon], [targetLat, targetLon]]
-      ).pad(0.25);
-      leafletMap.fitBounds(bounds);
-    }
-
-    function updateMyMarker() {
-      if (!leafletMap || currentLat === null) return;
-      myMarker.setLatLng([currentLat, currentLon]);
-      luftlinie.setLatLngs([[currentLat, currentLon], [targetLat, targetLon]]);
-      const dist = getDistance(currentLat, currentLon, targetLat, targetLon);
-      myMarker.setPopupContent('<b>Meine Position</b><br>' +
-        currentLat.toFixed(5) + ', ' + currentLon.toFixed(5) +
-        '<br>Entfernung: ' + (dist >= 1000 ? (dist / 1000).toFixed(2) + ' km' : dist.toFixed(0) + ' m'));
-    }
-
-    function setLayer(name) {
-      if (!leafletMap || name === currentLayer) return;
-      tileLayers[currentLayer].remove();
-      tileLayers[name].addTo(leafletMap);
-      currentLayer = name;
-      document.querySelectorAll('.layer-btn').forEach(function (b) { b.classList.remove('active'); });
-      document.getElementById('btn-' + name).classList.add('active');
-    }
-
-    function openMap() {
-      document.getElementById("map-modal").classList.add("open");
-      // Leaflet needs a moment after display:flex kicks in
-      setTimeout(function () {
-        initMap();
-        if (leafletMap) {
-          leafletMap.invalidateSize();
-          const myLat = currentLat !== null ? currentLat : targetLat + 0.02;
-          const myLon = currentLon !== null ? currentLon : targetLon + 0.02;
-          fitMap(myLat, myLon);
-          updateMyMarker();
+        function showPopup(distance) {
+            document.getElementById("popup-message").textContent = activeDest.message;
+            document.getElementById("popupDist").textContent = "Distanz: " + distance.toFixed(1) + " m";
+            document.getElementById("overlay").classList.add("visible");
         }
-      }, 120);
-    }
 
-    function closeMap() {
-      document.getElementById("map-modal").classList.remove("open");
-    }
+        function closePopup() {
+            document.getElementById("overlay").classList.remove("visible");
+        }
 
-    function closeMapOutside(e) {
-      if (e.target === document.getElementById("map-modal")) closeMap();
-    }
-  </script>
+        // ── UI update ─────────────────────────────────────────────────
+
+        function updateUI() {
+            if (!activeDest || currentLat === null) {
+                document.getElementById("distance").innerText = "Getting location...";
+                return;
+            }
+            const d = getDistance(currentLat, currentLon, activeDest.lat, activeDest.lon);
+            document.getElementById("distance").innerText = d.toFixed(1) + " m";
+            if (d < activeDest.threshold && !arrived) {
+                arrived = true;
+                showPopup(d);
+            }
+        }
+
+        // ── GPS ───────────────────────────────────────────────────────
+
+        function handleError(error) {
+            const msgs = { 1: "Permission denied", 2: "Position unavailable", 3: "Timeout" };
+            document.getElementById("status").innerText = "Error: " + (msgs[error.code] || error.message);
+        }
+
+        function startTracking() {
+            const status = document.getElementById("status");
+            if (!navigator.geolocation) { status.innerText = "Geolocation not supported"; return; }
+            status.innerText = "Position wird ermittelt...";
+            arrived = false;
+            navigator.geolocation.getCurrentPosition(pos => {
+                currentLat = pos.coords.latitude;
+                currentLon = pos.coords.longitude;
+                status.innerText = "Tracking aktiv";
+                watchId = navigator.geolocation.watchPosition(p => {
+                    currentLat = p.coords.latitude;
+                    currentLon = p.coords.longitude;
+                    updateMyMarker();
+                }, handleError, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
+            }, handleError, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
+        }
+
+        setInterval(updateUI, 1000);
+
+        // ── Leaflet Map ───────────────────────────────────────────────
+
+        let leafletMap = null;
+        let myMarker = null;
+        let targetMarker = null;
+        let luftlinie = null;
+        let currentLayer = 'satellite';
+
+        const tileLayers = {
+            satellite: L.tileLayer(
+                'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+                { attribution: 'Tiles &copy; Esri', maxZoom: 19 }
+            ),
+            street: L.tileLayer(
+                'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                { attribution: '&copy; OpenStreetMap contributors', maxZoom: 19 }
+            ),
+            topo: L.tileLayer(
+                'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+                { attribution: '&copy; OpenTopoMap', maxZoom: 17 }
+            )
+        };
+
+        const blueIcon = L.divIcon({
+            className: '',
+            html: '<div style="width:18px;height:18px;background:#3498db;border:3px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.4)"></div>',
+            iconSize: [18, 18], iconAnchor: [9, 9]
+        });
+
+        const redIcon = L.divIcon({
+            className: '',
+            html: '<div style="width:18px;height:18px;background:#e74c3c;border:3px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.4)"></div>',
+            iconSize: [18, 18], iconAnchor: [9, 9]
+        });
+
+        function initMap() {
+            if (leafletMap || !activeDest) return;
+
+            const myLat = currentLat !== null ? currentLat : activeDest.lat + 0.02;
+            const myLon = currentLon !== null ? currentLon : activeDest.lon + 0.02;
+            const centerLat = (myLat + activeDest.lat) / 2;
+            const centerLon = (myLon + activeDest.lon) / 2;
+
+            leafletMap = L.map('leaflet-map', { zoomControl: true }).setView([centerLat, centerLon], 14);
+            tileLayers.satellite.addTo(leafletMap);
+
+            targetMarker = L.marker([activeDest.lat, activeDest.lon], { icon: redIcon })
+                .addTo(leafletMap)
+                .bindPopup('<b>' + activeDest.name + '</b><br>' + activeDest.lat.toFixed(5) + ', ' + activeDest.lon.toFixed(5));
+
+            myMarker = L.marker([myLat, myLon], { icon: blueIcon })
+                .addTo(leafletMap)
+                .bindPopup(currentLat !== null ? '<b>Meine Position</b>' : '<b>Meine Position</b><br>(Demo)');
+
+            luftlinie = L.polyline(
+                [[myLat, myLon], [activeDest.lat, activeDest.lon]],
+                { color: '#e74c3c', weight: 2.5, dashArray: '7, 6', opacity: 0.9 }
+            ).addTo(leafletMap);
+
+            fitMap(myLat, myLon);
+        }
+
+        function fitMap(myLat, myLon) {
+            if (!leafletMap || !activeDest) return;
+            leafletMap.fitBounds(
+                L.latLngBounds([[myLat, myLon], [activeDest.lat, activeDest.lon]]).pad(0.25)
+            );
+        }
+
+        function updateMyMarker() {
+            if (!leafletMap || currentLat === null || !activeDest) return;
+            myMarker.setLatLng([currentLat, currentLon]);
+            luftlinie.setLatLngs([[currentLat, currentLon], [activeDest.lat, activeDest.lon]]);
+            const dist = getDistance(currentLat, currentLon, activeDest.lat, activeDest.lon);
+            myMarker.setPopupContent('<b>Meine Position</b><br>' +
+                currentLat.toFixed(5) + ', ' + currentLon.toFixed(5) +
+                '<br>Entfernung: ' + (dist >= 1000 ? (dist / 1000).toFixed(2) + ' km' : dist.toFixed(0) + ' m'));
+        }
+
+        function setLayer(name) {
+            if (!leafletMap || name === currentLayer) return;
+            tileLayers[currentLayer].remove();
+            tileLayers[name].addTo(leafletMap);
+            currentLayer = name;
+            document.querySelectorAll('.layer-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('btn-' + name).classList.add('active');
+        }
+
+        function openMap() {
+            document.getElementById("map-modal").classList.add("open");
+            setTimeout(() => {
+                initMap();
+                if (leafletMap) {
+                    leafletMap.invalidateSize();
+                    const myLat = currentLat !== null ? currentLat : activeDest.lat + 0.02;
+                    const myLon = currentLon !== null ? currentLon : activeDest.lon + 0.02;
+                    fitMap(myLat, myLon);
+                    updateMyMarker();
+                }
+            }, 120);
+        }
+
+        function closeMap() {
+            document.getElementById("map-modal").classList.remove("open");
+        }
+
+        function closeMapOutside(e) {
+            if (e.target === document.getElementById("map-modal")) closeMap();
+        }
+
+        // ── Routing ───────────────────────────────────────────────────
+
+        function init() {
+            const params = new URLSearchParams(window.location.search);
+            const key = params.get("ziel");
+
+            if (!key) {
+                const listDiv = document.getElementById("dest-list");
+                listDiv.style.display = "block";
+                Object.entries(destinations).forEach(([k, d]) => {
+                    const a = document.createElement("a");
+                    a.className = "dest-card";
+                    a.href = "?ziel=" + k;
+                    a.innerHTML = `<strong>${d.name}</strong><span>${d.lat}, ${d.lon} &nbsp;·&nbsp; Radius: ${d.threshold} m</span>`;
+                    listDiv.appendChild(a);
+                });
+                return;
+            }
+
+            if (!destinations[key]) {
+                document.getElementById("not-found").style.display = "block";
+                document.getElementById("missing-key").textContent = `"${key}"`;
+                document.getElementById("code-hint").textContent =
+                    `// In destinations.js ergänzen:
+"${key}": {
+  name: "Dein Zielname",
+  lat: 48.1234,
+  lon: 16.5678,
+  threshold: 20,   // Ankunfts-Radius in Metern
+  message: "Du bist angekommen!"
+}`;
+                return;
+            }
+
+            activeDest = destinations[key];
+            document.title = activeDest.name + " – GPS Tracker";
+            document.getElementById("dest-title").textContent = activeDest.name;
+            document.getElementById("dest-coords").textContent =
+                `${activeDest.lat}, ${activeDest.lon} · Radius: ${activeDest.threshold} m`;
+            document.getElementById("tracker").style.display = "block";
+            setInterval(updateUI, 1000);
+        }
+
+        init();
+    </script>
 </body>
 
 </html>
