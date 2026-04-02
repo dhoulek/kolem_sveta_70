@@ -137,7 +137,7 @@
       }
     }
 
-    // Rotate ring so N stays north
+    // Rotate ring so north stays north
     const heading = deviceHeading !== null ? deviceHeading : 0;
     ringGroupEl.setAttribute("transform", `rotate(${-heading}, ${CX}, ${CY})`);
 

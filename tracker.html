@@ -16,11 +16,11 @@
 
   <!-- Tracker page -->
   <div id="tracker">
-    <h2 id="dest-title">Ziel</h2>
+    <h2 id="dest-title">Cíl</h2>
     <p class="subtitle" id="dest-coords"></p>
-    <p id="status">Starte...</p>
+    <p id="status">Spouštím...</p>
     <div class="btn-row">
-      <button class="map-btn" onclick="openMap()">&#128506; Karte</button>
+      <button class="map-btn" onclick="openMap()">&#128506; Mapa</button>
     </div>
     <div id="kompass-wrap">
       <svg id="kompass-svg" viewBox="0 0 280 280" xmlns="http://www.w3.org/2000/svg"></svg>
@@ -31,27 +31,27 @@
   <div id="map-modal" onclick="closeMapOutside(event)">
     <div id="map-box">
       <div id="map-header">
-        <span>&#128506; Karte</span>
+        <span>&#128506; Mapa</span>
         <button id="map-close" onclick="closeMap()">&#x2715;</button>
       </div>
       <div id="map-layer-btns">
-        <button class="layer-btn active" id="btn-satellite" onclick="setLayer('satellite')">&#128752; Satellit</button>
-        <button class="layer-btn" id="btn-street" onclick="setLayer('street')">&#128205; Karte</button>
+        <button class="layer-btn active" id="btn-satellite" onclick="setLayer('satellite')">&#128752; Satelit</button>
+        <button class="layer-btn" id="btn-street" onclick="setLayer('street')">&#128205; Mapa</button>
         <button class="layer-btn" id="btn-topo" onclick="setLayer('topo')">&#9968; Topo</button>
       </div>
       <div id="leaflet-map"></div>
       <div id="map-legend">
         <div class="legend-item">
-          <div class="legend-dot" style="background:#3498db"></div> Mein Standort
+          <div class="legend-dot" style="background:#3498db"></div> Moje poloha
         </div>
         <div class="legend-item">
-          <div class="legend-dot" style="background:#e74c3c"></div> Ziel
+          <div class="legend-dot" style="background:#e74c3c"></div> Cíl
         </div>
         <div class="legend-item">
           <svg width="22" height="8" style="flex-shrink:0">
             <line x1="0" y1="4" x2="22" y2="4" stroke="#e74c3c" stroke-width="2" stroke-dasharray="4,3" />
           </svg>
-          Luftlinie
+          Vzdušná čára
         </div>
       </div>
     </div>
@@ -93,11 +93,11 @@
       if (d < activeDest.threshold && !arrived) {
         arrived = true;
 
-        // Letzte Station ohne Passwort → Ende
+        // Last station without password → go to end page
         if (activeDest.passwort === null) {
           window.location.href = "ende.html";
         } else {
-          // Weiter zur Passwort-Seite
+          // Continue to password page
           window.location.href = "passwort.html?id=" + stationId;
         }
       }
@@ -107,21 +107,21 @@
 
     function handleError(error) {
       const msgs = {
-        1: "GPS-Zugriff verweigert",
-        2: "Standort nicht verfügbar",
-        3: "Zeitüberschreitung"
+        1: "Přístup k GPS byl zamítnut",
+        2: "Poloha není dostupná",
+        3: "Časový limit vypršel"
       };
       document.getElementById("status").innerText = msgs[error.code] || error.message;
     }
 
     function startGPS() {
       const status = document.getElementById("status");
-      status.innerText = "Standort wird ermittelt...";
+      status.innerText = "Zjišťuji polohu...";
       arrived = false;
       navigator.geolocation.getCurrentPosition(pos => {
         currentLat = pos.coords.latitude;
         currentLon = pos.coords.longitude;
-        status.innerText = "Tracking aktiv";
+        status.innerText = "Sledování aktivní";
         watchId = navigator.geolocation.watchPosition(p => {
           currentLat = p.coords.latitude;
           currentLon = p.coords.longitude;
@@ -132,11 +132,11 @@
 
     async function startTracking() {
       const status = document.getElementById("status");
-      if (!navigator.geolocation) { status.innerText = "Geolokalisierung nicht unterstützt"; return; }
+      if (!navigator.geolocation) { status.innerText = "Geolokalizace není podporována"; return; }
 
       if (typeof DeviceOrientationEvent !== "undefined" &&
         typeof DeviceOrientationEvent.requestPermission === "function") {
-        status.innerText = "Einmal tippen zum Starten...";
+        status.innerText = "Jednou klepněte pro spuštění...";
         await new Promise(resolve => document.body.addEventListener("click", resolve, { once: true }));
         try {
           const result = await DeviceOrientationEvent.requestPermission();
@@ -165,7 +165,7 @@
       activeDest = stationen[stationId];
       document.title = activeDest.name + " – GPS Tracker";
       document.getElementById("dest-title").textContent = activeDest.name;
-      document.getElementById("dest-coords").textContent = "Radius: " + activeDest.threshold + " m";
+      document.getElementById("dest-coords").textContent = "Rádius: " + activeDest.threshold + " m";
       document.getElementById("tracker").style.display = "block";
 
       startTracking();

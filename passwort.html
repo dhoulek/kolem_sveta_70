@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="cs">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Passwort</title>
+  <title>Heslo</title>
   <script src="data.js"></script>
   <style>
     * { box-sizing: border-box; }
@@ -84,10 +84,10 @@
 <body>
 
 <div class="box">
-  <h2>🔒 Passwort</h2>
+  <h2>🔒 Heslo</h2>
   <p class="subtitle" id="titel"></p>
-  <input type="text" id="eingabe" placeholder="Passwort eingeben …" />
-  <button onclick="pruefen()">Prüfen</button>
+  <input type="text" id="eingabe" placeholder="Zadej heslo …" />
+  <button onclick="pruefen()">Zkontrolovat</button>
   <div id="meldung"></div>
 </div>
 
@@ -96,34 +96,35 @@
   const id = parseInt(params.get("id"));
   const station = stationen[id];
 
-  // Titel setzen
-  document.getElementById("titel").textContent = station.passwortTitel || ("Station " + (id + 1));
-  document.title = "Passwort – Station " + (id + 1);
+  // Set the title for this station's password prompt
+  document.getElementById("titel").textContent = station.passwortTitel || ("Stanice " + (id + 1));
+  document.title = "Heslo – Stanice " + (id + 1);
 
   function pruefen() {
     const eingabe = document.getElementById("eingabe").value;
     const meldung = document.getElementById("meldung");
 
-    if (eingabe === station.passwort) {
+    // Case-insensitive password comparison
+    if (eingabe.toLowerCase() === station.passwort.toLowerCase()) {
       meldung.className = "richtig";
       const naechste = id + 1;
 
       if (naechste >= stationen.length) {
-        // Keine weitere Station → Ende
-        meldung.textContent = "✅ Richtig! Du bist fertig!";
+        // No more stations → go to end page
+        meldung.textContent = "✅ Správně! Jsi hotov!";
         setTimeout(() => {
           window.location.href = "ende.html";
         }, 1000);
       } else {
-        // Weiter zum nächsten Tracker
-        meldung.textContent = "✅ Richtig! Weiter zum nächsten Ort…";
+        // Continue to next tracker station
+        meldung.textContent = "✅ Správně! Pokračuj na další místo…";
         setTimeout(() => {
           window.location.href = "tracker.html?id=" + naechste;
         }, 1000);
       }
 
     } else {
-      meldung.textContent = "❌ Falsches Passwort.";
+      meldung.textContent = "❌ Špatné heslo.";
       meldung.className = "falsch";
     }
   }

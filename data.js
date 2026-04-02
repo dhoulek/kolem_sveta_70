@@ -1,7 +1,7 @@
 // ============================================================
-// 🔧 STATIONEN HIER HINZUFÜGEN
-// Jede Station hat einen Tracker-Ort und ein Passwort danach.
-// Die letzte Station hat kein Passwort (Ende der Kette).
+// 🔧 ADD STATIONS HERE
+// Each station has a tracker location and a password after it.
+// The last station has no password (end of the chain).
 // ============================================================
 
 const stationen = [
@@ -12,7 +12,7 @@ const stationen = [
     lon: 16.750465,
     threshold: 20,
 
-    // Passwort danach
+    // Password after this station
     passwort: "Rybak123",
     passwortTitel: "Station 1 HOVNO"
   },
@@ -23,28 +23,28 @@ const stationen = [
     lon: 16.746994,
     threshold: 20,
 
-    // Passwort danach
+    // Password after this station
     passwort: "Dum56Pass",
     passwortTitel: "Station 2 HOVNO"
   },
   {
-    // Tracker 2 – letzte Station, kein Passwort danach
+    // Tracker 2 – last station, no password after
     name: "Chalupa",
     lat: 49.784710,
     lon: 16.747815,
     threshold: 20,
 
-    passwort: null,       // null = letzte Station
+    passwort: null,       // null = last station
     passwortTitel: null
   }
 
-  // Neue Station hinzufügen:
+  // Add a new station:
   // ,{
-  //   name: "Mein Ort",
+  //   name: "My Place",
   //   lat: 48.1234,
   //   lon: 16.5678,
   //   threshold: 20,
-  //   passwort: "meinpasswort",
-  //   passwortTitel: "Super gemacht!"
+  //   passwort: "mypassword",
+  //   passwortTitel: "Well done!"
   // }
 ];
