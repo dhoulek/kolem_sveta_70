@@ -166,9 +166,9 @@
     if (e.webkitCompassHeading != null) {
       deviceHeading = e.webkitCompassHeading;                 // iOS
     } else if (e.absolute && e.alpha != null) {
-      deviceHeading = (360 - e.alpha) % 360;                 // Android absolute
+      deviceHeading = Math.round((360 - e.alpha) % 360);                 // Android absolute
     } else if (e.alpha != null && deviceHeading === null) {
-      deviceHeading = (360 - e.alpha) % 360;                 // fallback
+      deviceHeading = Math.round((360 - e.alpha) % 360);                 // fallback
     }
   }
 
