@@ -1,17 +1,17 @@
-// map.js – Leaflet map logic for index.html
-// Requires: activeDest, currentLat, currentLon, getDistance() from index.html
-// Requires: Leaflet already loaded, DOM elements from index.html present
+// map.js – Leaflet map logic for tracker.html
+// Requires: activeDest, currentLat, currentLon, getDistance() from tracker.html
+// Requires: Leaflet already loaded, DOM elements from tracker.html present
 
 (function () {
 
-  // ── State ────────────────────────────────────────────────────
+  // ── State ─────────────────────────────────────────────────
   let leafletMap = null;
   let myMarker = null;
   let targetMarker = null;
-  let luftlinie = null;
+  let straightLine = null;
   let currentLayer = 'satellite';
 
-  // ── Tile layers ──────────────────────────────────────────────
+  // ── Tile layers ───────────────────────────────────────────
   const tileLayers = {
     satellite: L.tileLayer(
       'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
@@ -27,7 +27,7 @@
     )
   };
 
-  // ── Marker icons ─────────────────────────────────────────────
+  // ── Marker icons ──────────────────────────────────────────
   const blueIcon = L.divIcon({
     className: '',
     html: '<div style="width:18px;height:18px;background:#3498db;border:3px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.4)"></div>',
@@ -42,11 +42,11 @@
     iconAnchor: [9, 9]
   });
 
-  // ── Helpers ──────────────────────────────────────────────────
+  // ── Position helpers ──────────────────────────────────────
   function myLat() { return (typeof currentLat !== 'undefined' && currentLat !== null) ? currentLat : activeDest.lat + 0.02; }
   function myLon() { return (typeof currentLon !== 'undefined' && currentLon !== null) ? currentLon : activeDest.lon + 0.02; }
 
-  // ── Init map ─────────────────────────────────────────────────
+  // ── Init map ──────────────────────────────────────────────
   function initMap() {
     if (leafletMap || !activeDest) return;
 
@@ -59,7 +59,7 @@
     // Destination marker
     targetMarker = L.marker([activeDest.lat, activeDest.lon], { icon: redIcon })
       .addTo(leafletMap)
-      .bindPopup('<b>' + activeDest.name + '</b><br>' + activeDest.lat.toFixed(5) + ', ' + activeDest.lon.toFixed(5));
+      .bindPopup('<b>' + activeDest.locationName + '</b><br>' + activeDest.lat.toFixed(5) + ', ' + activeDest.lon.toFixed(5));
 
     // My position marker
     myMarker = L.marker([myLat(), myLon()], { icon: blueIcon })
@@ -67,7 +67,7 @@
       .bindPopup(currentLat !== null ? '<b>Moje poloha</b>' : '<b>Moje poloha</b><br>(Demo)');
 
     // Straight line between positions
-    luftlinie = L.polyline(
+    straightLine = L.polyline(
       [[myLat(), myLon()], [activeDest.lat, activeDest.lon]],
       { color: '#e74c3c', weight: 2.5, dashArray: '7, 6', opacity: 0.9 }
     ).addTo(leafletMap);
@@ -82,11 +82,11 @@
     );
   }
 
-  // ── Update marker position (called from index.html on each new GPS fix) ──
+  // ── Update marker on each GPS fix ─────────────────────────
   window.updateMyMarker = function () {
     if (!leafletMap || currentLat === null || !activeDest) return;
     myMarker.setLatLng([currentLat, currentLon]);
-    luftlinie.setLatLngs([[currentLat, currentLon], [activeDest.lat, activeDest.lon]]);
+    straightLine.setLatLngs([[currentLat, currentLon], [activeDest.lat, activeDest.lon]]);
     const dist = getDistance(currentLat, currentLon, activeDest.lat, activeDest.lon);
     myMarker.setPopupContent(
       '<b>Moje poloha</b><br>' +
@@ -95,7 +95,7 @@
     );
   };
 
-  // ── Layer toggle ─────────────────────────────────────────────
+  // ── Layer toggle ──────────────────────────────────────────
   window.setLayer = function (name) {
     if (!leafletMap || name === currentLayer) return;
     tileLayers[currentLayer].remove();
@@ -105,7 +105,7 @@
     document.getElementById('btn-' + name).classList.add('active');
   };
 
-  // ── Open / close map modal ────────────────────────────────────
+  // ── Open / close map modal ────────────────────────────────
   window.openMap = function () {
     document.getElementById("map-modal").classList.add("open");
     setTimeout(() => {

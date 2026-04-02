@@ -1,0 +1,41 @@
+/* =============================================================
+   end_style.css – End Page Styles
+   ============================================================= */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+  background-color: #f0f2f5;
+}
+
+.box {
+  background: white;
+  padding: 48px 40px;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+  text-align: center;
+  width: 320px;
+}
+
+.icon {
+  font-size: 4em;
+  margin-bottom: 16px;
+}
+
+h2 {
+  color: #2e7d32;
+  margin-bottom: 12px;
+}
+
+p {
+  color: #555;
+  line-height: 1.6;
+}

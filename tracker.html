@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
   <meta charset="UTF-8">
@@ -8,24 +8,23 @@
 
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <!-- Styles -->
-  <link rel="stylesheet" href="style.css" />
+  <!-- Tracker styles -->
+  <link rel="stylesheet" href="tracker_style.css" />
 </head>
 
 <body>
 
   <!-- Tracker page -->
   <div id="tracker">
-    <h2 id="dest-title">Cíl</h2>
-    <p class="subtitle" id="dest-coords"></p>
+    <h2 id="locationTitle">Destination</h2>
+    <p class="subtitle" id="locationRadius"></p>
     <p id="status">Spouštím...</p>
     <div class="btn-row">
       <button class="map-btn" onclick="openMap()">&#128506; Mapa</button>
     </div>
-    <div id="kompass-wrap">
-      <svg id="kompass-svg" viewBox="0 0 280 280" xmlns="http://www.w3.org/2000/svg"></svg>
+    <div id="compass-wrap">
+      <svg id="compass-svg" viewBox="0 0 280 280" xmlns="http://www.w3.org/2000/svg"></svg>
     </div>
-    <p id="heading-value">Heading: --°</p>
   </div>
 
   <!-- Map modal -->
@@ -61,7 +60,7 @@
   <!-- Data -->
   <script src="data.js"></script>
   <!-- Compass logic -->
-  <script src="kompass.js"></script>
+  <script src="compass.js"></script>
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <!-- Map logic -->
@@ -85,39 +84,40 @@
       return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 
-    // ── UI update & arrival check ─────────────────────────────
+    // ── Arrival check ─────────────────────────────────────────
 
     function updateUI() {
       if (!activeDest || currentLat === null) return;
-      const d = getDistance(currentLat, currentLon, activeDest.lat, activeDest.lon);
+      const distance = getDistance(currentLat, currentLon, activeDest.lat, activeDest.lon);
 
-      if (d < activeDest.threshold && !arrived) {
+      if (distance < activeDest.radius && !arrived) {
         arrived = true;
+        const nextId = stationId + 1;
 
-        // Last station without password → go to end page
-        if (activeDest.passwort === null) {
-          window.location.href = "ende.html";
+        if (nextId >= stations.length) {
+          // Last tracker reached → game over
+          window.location.href = "end.html";
         } else {
-          // Continue to password page
-          window.location.href = "passwort.html?id=" + stationId;
+          // Go to the next password
+          window.location.href = "password.html?id=" + nextId;
         }
       }
     }
 
     // ── GPS ───────────────────────────────────────────────────
 
-    function handleError(error) {
+    function handleGpsError(error) {
       const msgs = {
-        1: "Přístup k GPS byl zamítnut",
+        1: "Přístup k GPS zamítnut",
         2: "Poloha není dostupná",
-        3: "Časový limit vypršel"
+        3: "Timeout"
       };
       document.getElementById("status").innerText = msgs[error.code] || error.message;
     }
 
     function startGPS() {
       const status = document.getElementById("status");
-      status.innerText = "Zjišťuji polohu...";
+      status.innerText = "Získávám polohu...";
       arrived = false;
       navigator.geolocation.getCurrentPosition(pos => {
         currentLat = pos.coords.latitude;
@@ -127,17 +127,17 @@
           currentLat = p.coords.latitude;
           currentLon = p.coords.longitude;
           updateMyMarker();
-        }, handleError, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
-      }, handleError, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
+        }, handleGpsError, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
+      }, handleGpsError, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
     }
 
     async function startTracking() {
       const status = document.getElementById("status");
-      if (!navigator.geolocation) { status.innerText = "Geolokalizace není podporována"; return; }
+      if (!navigator.geolocation) { status.innerText = "GPS není podporována"; return; }
 
       if (typeof DeviceOrientationEvent !== "undefined" &&
         typeof DeviceOrientationEvent.requestPermission === "function") {
-        status.innerText = "Jednou klepněte pro spuštění...";
+        status.innerText = "Klepni pro spuštění...";
         await new Promise(resolve => document.body.addEventListener("click", resolve, { once: true }));
         try {
           const result = await DeviceOrientationEvent.requestPermission();
@@ -158,15 +158,15 @@
       const params = new URLSearchParams(window.location.search);
       stationId = parseInt(params.get("id")) || 0;
 
-      if (stationId >= stationen.length) {
-        window.location.href = "ende.html";
+      if (stationId >= stations.length) {
+        window.location.href = "end.html";
         return;
       }
 
-      activeDest = stationen[stationId];
-      document.title = activeDest.name + " – GPS Tracker";
-      document.getElementById("dest-title").textContent = activeDest.name;
-      document.getElementById("dest-coords").textContent = "Rádius: " + activeDest.threshold + " m";
+      activeDest = stations[stationId];
+      document.title = activeDest.locationName + " – GPS Tracker";
+      document.getElementById("locationTitle").textContent = activeDest.locationName;
+      document.getElementById("locationRadius").textContent = "Radius: " + activeDest.radius + " m";
       document.getElementById("tracker").style.display = "block";
 
       startTracking();

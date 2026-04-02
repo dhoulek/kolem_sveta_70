@@ -1,15 +1,15 @@
-// kompass.js – Compass logic for index.html
-// Requires: activeDest, currentLat, currentLon from index.html
-// Requires: SVG element with id="kompass-svg" in the DOM
+// compass.js – Compass logic for tracker.html
+// Requires: activeDest, currentLat, currentLon from tracker.html
+// Requires: SVG element with id="compass-svg" in the DOM
 
 (function () {
   const CX = 140, CY = 140, R_OUTER = 130, R_INNER = 116;
 
   let deviceHeading = null;
-  let ringGroupEl = null;
-  let dotEl = null;
-  let distTextEl = null;
-  let unitTextEl = null;
+  let ringGroup = null;
+  let dot = null;
+  let distText = null;
+  let unitText = null;
 
   function toRad(v) { return v * Math.PI / 180; }
   function toDeg(v) { return v * 180 / Math.PI; }
@@ -46,12 +46,12 @@
     }));
 
     // 16 ticks: 4 cardinal (big) + 3 minor between each
-    const cardinals = { 0: "S", 90: "V", 180: "J", 270: "Z" };
+    const cardinals = { 0: "N", 90: "E", 180: "S", 270: "W" };
     for (let i = 0; i < 16; i++) {
       const angleDeg = i * 22.5;
       const rad = toRad(angleDeg - 90);
-      const isCard = angleDeg % 90 === 0;
-      const tickLen = isCard ? 18 : 11;
+      const isCardinal = angleDeg % 90 === 0;
+      const tickLen = isCardinal ? 18 : 11;
       const r1 = R_OUTER - 2;
       const r2 = r1 - tickLen;
 
@@ -59,13 +59,13 @@
         x1: CX + r1 * Math.cos(rad), y1: CY + r1 * Math.sin(rad),
         x2: CX + r2 * Math.cos(rad), y2: CY + r2 * Math.sin(rad),
         stroke: "#222",
-        "stroke-width": isCard ? "2.5" : "1.5",
+        "stroke-width": isCardinal ? "2.5" : "1.5",
         "stroke-linecap": "round"
       }));
 
-      if (isCard) {
+      if (isCardinal) {
         const lr = R_OUTER - tickLen - 14;
-        const lbl = svgEl("text", {
+        const label = svgEl("text", {
           x: CX + lr * Math.cos(rad),
           y: CY + lr * Math.sin(rad),
           "text-anchor": "middle",
@@ -74,31 +74,31 @@
           "font-weight": "bold",
           fill: angleDeg === 0 ? "#c0392b" : "#222"
         });
-        lbl.textContent = cardinals[angleDeg];
-        group.appendChild(lbl);
+        label.textContent = cardinals[angleDeg];
+        group.appendChild(label);
       }
     }
   }
 
   function initSVG() {
-    const svg = document.getElementById("kompass-svg");
+    const svg = document.getElementById("compass-svg");
     if (!svg) return;
 
     // Rotating ring group
-    ringGroupEl = svgEl("g", {});
-    buildRing(ringGroupEl);
-    svg.appendChild(ringGroupEl);
+    ringGroup = svgEl("g", {});
+    buildRing(ringGroup);
+    svg.appendChild(ringGroup);
 
     // Red destination dot (stays in screen space, not rotated with ring)
-    dotEl = svgEl("circle", {
+    dot = svgEl("circle", {
       cx: CX, cy: CY - (R_INNER - 6),
       r: "9", fill: "#e74c3c",
       stroke: "#fff", "stroke-width": "2"
     });
-    svg.appendChild(dotEl);
+    svg.appendChild(dot);
 
     // Distance value text
-    distTextEl = svgEl("text", {
+    distText = svgEl("text", {
       x: CX, y: CY - 12,
       "text-anchor": "middle",
       "dominant-baseline": "central",
@@ -106,73 +106,67 @@
       "font-weight": "bold",
       fill: "#222"
     });
-    distTextEl.textContent = "--";
-    svg.appendChild(distTextEl);
+    distText.textContent = "--";
+    svg.appendChild(distText);
 
     // Unit label text
-    unitTextEl = svgEl("text", {
+    unitText = svgEl("text", {
       x: CX, y: CY + 20,
       "text-anchor": "middle",
       "dominant-baseline": "central",
       "font-size": "15",
       fill: "#888"
     });
-    unitTextEl.textContent = "";
-    svg.appendChild(unitTextEl);
+    unitText.textContent = "";
+    svg.appendChild(unitText);
   }
 
   function updateCompass() {
-  if (!ringGroupEl) return;
+    if (!ringGroup) return;
 
-  // Update distance and unit label
-  if (typeof currentLat !== "undefined" && currentLat !== null &&
-    typeof activeDest !== "undefined" && activeDest !== null) {
-    const dist = getDistance(currentLat, currentLon, activeDest.lat, activeDest.lon);
-    if (dist >= 1000) {
-      distTextEl.textContent = (dist / 1000).toFixed(2);
-      unitTextEl.textContent = "km";
-    } else {
-      distTextEl.textContent = Math.round(dist);
-      unitTextEl.textContent = "m";
+    // Update distance display
+    if (typeof currentLat !== "undefined" && currentLat !== null &&
+      typeof activeDest !== "undefined" && activeDest !== null) {
+      const dist = getDistance(currentLat, currentLon, activeDest.lat, activeDest.lon);
+      if (dist >= 1000) {
+        distText.textContent = (dist / 1000).toFixed(2);
+        unitText.textContent = "km";
+      } else {
+        distText.textContent = Math.round(dist);
+        unitText.textContent = "m";
+      }
     }
+
+    // Rotate ring so north stays north
+    const heading = deviceHeading !== null ? deviceHeading : 0;
+    ringGroup.setAttribute("transform", `rotate(${-heading}, ${CX}, ${CY})`);
+
+    // Move red dot toward destination bearing, corrected for device heading
+    let dotAngle = 0;
+    if (typeof currentLat !== "undefined" && currentLat !== null &&
+      typeof activeDest !== "undefined" && activeDest !== null) {
+      const bearing = getBearing(currentLat, currentLon, activeDest.lat, activeDest.lon);
+      dotAngle = (bearing - heading + 360) % 360;
+    }
+
+    const dotRad = toRad(dotAngle - 90);
+    const dotR = R_INNER - 6;
+    dot.setAttribute("cx", CX + dotR * Math.cos(dotRad));
+    dot.setAttribute("cy", CY + dotR * Math.sin(dotRad));
   }
-
-  // Rotate ring so north stays north
-  const heading = deviceHeading !== null ? deviceHeading : 0;
-  ringGroupEl.setAttribute("transform", `rotate(${-heading}, ${CX}, ${CY})`);
-
-  // Move red dot to bearing toward destination, corrected for device heading
-  let dotAngle = 0;
-  if (typeof currentLat !== "undefined" && currentLat !== null &&
-    typeof activeDest !== "undefined" && activeDest !== null) {
-    const bearing = getBearing(currentLat, currentLon, activeDest.lat, activeDest.lon);
-    dotAngle = (bearing - heading + 360) % 360;
-  }
-
-  const dotRad = toRad(dotAngle - 90);
-  const dotR = R_INNER - 6;
-  dotEl.setAttribute("cx", CX + dotR * Math.cos(dotRad));
-  dotEl.setAttribute("cy", CY + dotR * Math.sin(dotRad));
-
-  // 👉 HIER NEU: Heading anzeigen
-  const el = document.getElementById("heading-value");
-  if (el && deviceHeading !== null) {
-    el.textContent = "Heading: " + deviceHeading.toFixed(1) + "°";
-  }
-}
 
   // Handle device orientation events
   function handleOrientation(e) {
     if (e.webkitCompassHeading != null) {
-      deviceHeading = e.webkitCompassHeading;                 // iOS
+      deviceHeading = e.webkitCompassHeading;               // iOS
     } else if (e.absolute && e.alpha != null) {
-      deviceHeading = (360 - e.alpha) % 360;                 // Android absolute
+      deviceHeading = (360 - e.alpha) % 360;               // Android absolute
     } else if (e.alpha != null && deviceHeading === null) {
-      deviceHeading = (360 - e.alpha) % 360;                 // fallback
+      deviceHeading = (360 - e.alpha) % 360;               // fallback
     }
   }
 
-  // Called from index.html to start listening to device orientation
+  // Called from tracker.html to start listening to device orientation
   window.startCompassOrientation = function () {
     if (!window.DeviceOrientationEvent) return;
     window.addEventListener("deviceorientationabsolute", handleOrientation, true);

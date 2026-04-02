@@ -1,50 +1,58 @@
 // ============================================================
 // 🔧 ADD STATIONS HERE
-// Each station has a tracker location and a password after it.
-// The last station has no password (end of the chain).
+//
+// Chain order:
+//   password(0) → tracker(0) → password(1) → tracker(1) → ... → tracker(last) = END
+//
+// Each station has:
+//   - A password the player must enter BEFORE going to that location
+//   - A tracker location the player must reach AFTER the password
+//
+// The last tracker arrival = end of the game (no password after it).
 // ============================================================
 
-const stationen = [
+const stations = [
   {
-    // Tracker 0
-    name: "Origin",
+    // Password 0 (shown first)
+    passwordTitle: "Rybnik",
+    password: "Heslo1",
+
+    // Tracker 0 (shown after password 0)
+    locationName: "Origin",
     lat: 0,
     lon: 0,
-    threshold: 20,
-
-    // Password after this station
-    passwort: "Rybak123",
-    passwortTitel: "Station 1 HOVNO"
+    radius: 20
   },
   {
+    // Password 1
+    passwordTitle: "Dum 56",
+    password: "Heslo2",
+
     // Tracker 1
-    name: "Dum 56 Burušov",
+    locationName: "Dum 56 Burušov",
     lat: 49.784332,
     lon: 16.746994,
-    threshold: 20,
-
-    // Password after this station
-    passwort: "Dum56Pass",
-    passwortTitel: "Station 2 HOVNO"
+    radius: 20
   },
   {
-    // Tracker 2 – last station, no password after
-    name: "Chalupa",
+    // Password 2
+    passwordTitle: "Chalupa",
+    password: "Heslo3",
+
+    // Tracker 2 – last tracker, reaching it = game over
+    locationName: "Chalupa",
     lat: 49.784710,
     lon: 16.747815,
-    threshold: 20,
-
-    passwort: "123",       // null = last station
-    passwortTitel: "Station 3 HOVNO"
+    radius: 20
   }
 
   // Add a new station:
   // ,{
-  //   name: "My Place",
+  //   passwordTitle: "Station X complete! Enter the next code:",
+  //   password: "mypassword",
+  //   locationName: "My Place",
   //   lat: 48.1234,
   //   lon: 16.5678,
-  //   threshold: 20,
-  //   passwort: "mypassword",
-  //   passwortTitel: "Well done!"
+  //   radius: 20
   // }
 ];

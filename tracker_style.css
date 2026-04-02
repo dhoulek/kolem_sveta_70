@@ -1,9 +1,6 @@
 /* =============================================================
-   style.css – GPS Tracker Styles
+   tracker_style.css – GPS Tracker Page Styles
    ============================================================= */
-
-
-/* ── Reset & Base ────────────────────────────────────────── */
 
 * {
   box-sizing: border-box;
@@ -33,7 +30,6 @@ h2 {
   font-size: 0.95em;
 }
 
-
 /* ── Buttons ─────────────────────────────────────────────── */
 
 .btn-row {
@@ -58,162 +54,24 @@ button.map-btn:hover {
   background: #219150;
 }
 
-
 /* ── Compass ─────────────────────────────────────────────── */
 
-#kompass-wrap {
+#compass-wrap {
   margin: 16px auto 0;
   width: 280px;
   height: 280px;
 }
 
-#kompass-svg {
+#compass-svg {
   width: 100%;
   height: 100%;
 }
 
-
-/* ── Destination list (index page) ──────────────────────── */
-
-#dest-list {
-  display: none;
-}
-
-.dest-card {
-  background: #fff;
-  border-radius: 12px;
-  padding: 16px 20px;
-  margin: 10px auto;
-  max-width: 420px;
-  text-align: left;
-  border: 1px solid #e0e0e0;
-  text-decoration: none;
-  color: inherit;
-  display: block;
-  transition: box-shadow 0.15s;
-}
-
-.dest-card:hover {
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-}
-
-.dest-card strong {
-  font-size: 1.1em;
-}
-
-.dest-card span {
-  font-size: 0.8em;
-  color: #999;
-  display: block;
-  margin-top: 4px;
-}
-
-
-/* ── Tracker page ────────────────────────────────────────── */
+/* ── Tracker container ───────────────────────────────────── */
 
 #tracker {
   display: none;
 }
-
-
-/* ── Not found page ──────────────────────────────────────── */
-
-#not-found {
-  display: none;
-}
-
-#not-found h2 {
-  color: #c0392b;
-}
-
-#not-found a {
-  color: #3498db;
-  text-decoration: none;
-}
-
-#not-found pre {
-  background: #fff;
-  border-radius: 10px;
-  padding: 16px;
-  text-align: left;
-  display: inline-block;
-  font-size: 0.85em;
-  border: 1px solid #ddd;
-  max-width: 480px;
-  width: 90%;
-}
-
-
-/* ── Arrival popup ───────────────────────────────────────── */
-
-#overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.55);
-  z-index: 100;
-  align-items: center;
-  justify-content: center;
-}
-
-#overlay.visible {
-  display: flex;
-}
-
-#popup {
-  background: #fff;
-  border-radius: 16px;
-  padding: 36px 32px 28px;
-  max-width: 320px;
-  width: 90%;
-  text-align: center;
-  animation: popIn 0.25s ease;
-}
-
-@keyframes popIn {
-  from {
-    transform: scale(0.85);
-    opacity: 0;
-  }
-
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-#popup .icon {
-  font-size: 3em;
-  margin-bottom: 12px;
-}
-
-#popup h2 {
-  margin: 0 0 10px;
-  font-size: 1.4em;
-  color: #222;
-}
-
-#popup p {
-  margin: 0 0 24px;
-  color: #555;
-  font-size: 1em;
-  line-height: 1.5;
-}
-
-#popup button {
-  background: #28a745;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  padding: 12px 28px;
-  font-size: 1em;
-  cursor: pointer;
-}
-
-#popup button:hover {
-  background: #218838;
-}
-
 
 /* ── Map modal ───────────────────────────────────────────── */
 
