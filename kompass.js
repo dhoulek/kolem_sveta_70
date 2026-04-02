@@ -122,38 +122,44 @@
   }
 
   function updateCompass() {
-    if (!ringGroupEl) return;
+  if (!ringGroupEl) return;
 
-    // Update distance and unit label
-    if (typeof currentLat !== "undefined" && currentLat !== null &&
-      typeof activeDest !== "undefined" && activeDest !== null) {
-      const dist = getDistance(currentLat, currentLon, activeDest.lat, activeDest.lon);
-      if (dist >= 1000) {
-        distTextEl.textContent = (dist / 1000).toFixed(2);
-        unitTextEl.textContent = "km";
-      } else {
-        distTextEl.textContent = Math.round(dist);
-        unitTextEl.textContent = "m";
-      }
+  // Update distance and unit label
+  if (typeof currentLat !== "undefined" && currentLat !== null &&
+    typeof activeDest !== "undefined" && activeDest !== null) {
+    const dist = getDistance(currentLat, currentLon, activeDest.lat, activeDest.lon);
+    if (dist >= 1000) {
+      distTextEl.textContent = (dist / 1000).toFixed(2);
+      unitTextEl.textContent = "km";
+    } else {
+      distTextEl.textContent = Math.round(dist);
+      unitTextEl.textContent = "m";
     }
-
-    // Rotate ring so north stays north
-    const heading = deviceHeading !== null ? deviceHeading : 0;
-    ringGroupEl.setAttribute("transform", `rotate(${-heading}, ${CX}, ${CY})`);
-
-    // Move red dot to bearing toward destination, corrected for device heading
-    let dotAngle = 0;
-    if (typeof currentLat !== "undefined" && currentLat !== null &&
-      typeof activeDest !== "undefined" && activeDest !== null) {
-      const bearing = getBearing(currentLat, currentLon, activeDest.lat, activeDest.lon);
-      dotAngle = (bearing - heading + 360) % 360;
-    }
-
-    const dotRad = toRad(dotAngle - 90);
-    const dotR = R_INNER - 6;
-    dotEl.setAttribute("cx", CX + dotR * Math.cos(dotRad));
-    dotEl.setAttribute("cy", CY + dotR * Math.sin(dotRad));
   }
+
+  // Rotate ring so north stays north
+  const heading = deviceHeading !== null ? deviceHeading : 0;
+  ringGroupEl.setAttribute("transform", `rotate(${-heading}, ${CX}, ${CY})`);
+
+  // Move red dot to bearing toward destination, corrected for device heading
+  let dotAngle = 0;
+  if (typeof currentLat !== "undefined" && currentLat !== null &&
+    typeof activeDest !== "undefined" && activeDest !== null) {
+    const bearing = getBearing(currentLat, currentLon, activeDest.lat, activeDest.lon);
+    dotAngle = (bearing - heading + 360) % 360;
+  }
+
+  const dotRad = toRad(dotAngle - 90);
+  const dotR = R_INNER - 6;
+  dotEl.setAttribute("cx", CX + dotR * Math.cos(dotRad));
+  dotEl.setAttribute("cy", CY + dotR * Math.sin(dotRad));
+
+  // 👉 HIER NEU: Heading anzeigen
+  const el = document.getElementById("heading-value");
+  if (el && deviceHeading !== null) {
+    el.textContent = "Heading: " + deviceHeading.toFixed(1) + "°";
+  }
+}
 
   // Handle device orientation events
   function handleOrientation(e) {
