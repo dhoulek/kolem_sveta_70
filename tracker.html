@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GPS Tracker</title>
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- Styles -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+
+  <!-- Tracker page -->
+  <div id="tracker">
+    <h2 id="dest-title">Ziel</h2>
+    <p class="subtitle" id="dest-coords"></p>
+    <p id="status">Starte...</p>
+    <div class="btn-row">
+      <button class="map-btn" onclick="openMap()">&#128506; Karte</button>
+    </div>
+    <div id="kompass-wrap">
+      <svg id="kompass-svg" viewBox="0 0 280 280" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+  </div>
+
+  <!-- Map modal -->
+  <div id="map-modal" onclick="closeMapOutside(event)">
+    <div id="map-box">
+      <div id="map-header">
+        <span>&#128506; Karte</span>
+        <button id="map-close" onclick="closeMap()">&#x2715;</button>
+      </div>
+      <div id="map-layer-btns">
+        <button class="layer-btn active" id="btn-satellite" onclick="setLayer('satellite')">&#128752; Satellit</button>
+        <button class="layer-btn" id="btn-street" onclick="setLayer('street')">&#128205; Karte</button>
+        <button class="layer-btn" id="btn-topo" onclick="setLayer('topo')">&#9968; Topo</button>
+      </div>
+      <div id="leaflet-map"></div>
+      <div id="map-legend">
+        <div class="legend-item">
+          <div class="legend-dot" style="background:#3498db"></div> Mein Standort
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot" style="background:#e74c3c"></div> Ziel
+        </div>
+        <div class="legend-item">
+          <svg width="22" height="8" style="flex-shrink:0">
+            <line x1="0" y1="4" x2="22" y2="4" stroke="#e74c3c" stroke-width="2" stroke-dasharray="4,3" />
+          </svg>
+          Luftlinie
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Data -->
+  <script src="data.js"></script>
+  <!-- Compass logic -->
+  <script src="kompass.js"></script>
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Map logic -->
+  <script src="map.js"></script>
+
+  <script>
+    let currentLat = null, currentLon = null;
+    let watchId = null, arrived = false;
+    let activeDest = null;
+    let stationId = 0;
+
+    // ── Helpers ───────────────────────────────────────────────
+
+    function toRad(v) { return v * Math.PI / 180; }
+
+    function getDistance(lat1, lon1, lat2, lon2) {
+      const R = 6371000;
+      const dLat = toRad(lat2 - lat1);
+      const dLon = toRad(lon2 - lon1);
+      const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    // ── UI update & arrival check ─────────────────────────────
+
+    function updateUI() {
+      if (!activeDest || currentLat === null) return;
+      const d = getDistance(currentLat, currentLon, activeDest.lat, activeDest.lon);
+
+      if (d < activeDest.threshold && !arrived) {
+        arrived = true;
+
+        // Letzte Station ohne Passwort → Ende
+        if (activeDest.passwort === null) {
+          window.location.href = "ende.html";
+        } else {
+          // Weiter zur Passwort-Seite
+          window.location.href = "passwort.html?id=" + stationId;
+        }
+      }
+    }
+
+    // ── GPS ───────────────────────────────────────────────────
+
+    function handleError(error) {
+      const msgs = {
+        1: "GPS-Zugriff verweigert",
+        2: "Standort nicht verfügbar",
+        3: "Zeitüberschreitung"
+      };
+      document.getElementById("status").innerText = msgs[error.code] || error.message;
+    }
+
+    function startGPS() {
+      const status = document.getElementById("status");
+      status.innerText = "Standort wird ermittelt...";
+      arrived = false;
+      navigator.geolocation.getCurrentPosition(pos => {
+        currentLat = pos.coords.latitude;
+        currentLon = pos.coords.longitude;
+        status.innerText = "Tracking aktiv";
+        watchId = navigator.geolocation.watchPosition(p => {
+          currentLat = p.coords.latitude;
+          currentLon = p.coords.longitude;
+          updateMyMarker();
+        }, handleError, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
+      }, handleError, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
+    }
+
+    async function startTracking() {
+      const status = document.getElementById("status");
+      if (!navigator.geolocation) { status.innerText = "Geolokalisierung nicht unterstützt"; return; }
+
+      if (typeof DeviceOrientationEvent !== "undefined" &&
+        typeof DeviceOrientationEvent.requestPermission === "function") {
+        status.innerText = "Einmal tippen zum Starten...";
+        await new Promise(resolve => document.body.addEventListener("click", resolve, { once: true }));
+        try {
+          const result = await DeviceOrientationEvent.requestPermission();
+          if (result === "granted") startCompassOrientation();
+        } catch (_) { }
+      } else {
+        startCompassOrientation();
+      }
+
+      startGPS();
+    }
+
+    setInterval(updateUI, 1000);
+
+    // ── Init ──────────────────────────────────────────────────
+
+    function init() {
+      const params = new URLSearchParams(window.location.search);
+      stationId = parseInt(params.get("id")) || 0;
+
+      if (stationId >= stationen.length) {
+        window.location.href = "ende.html";
+        return;
+      }
+
+      activeDest = stationen[stationId];
+      document.title = activeDest.name + " – GPS Tracker";
+      document.getElementById("dest-title").textContent = activeDest.name;
+      document.getElementById("dest-coords").textContent = "Radius: " + activeDest.threshold + " m";
+      document.getElementById("tracker").style.display = "block";
+
+      startTracking();
+    }
+
+    init();
+  </script>
+</body>
+
+</html>

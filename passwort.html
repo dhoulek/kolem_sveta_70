@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Passwort</title>
+  <script src="data.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background-color: #f0f2f5;
+    }
+
+    .box {
+      background: white;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      text-align: center;
+      width: 320px;
+    }
+
+    h2 {
+      margin-bottom: 6px;
+      color: #333;
+    }
+
+    .subtitle {
+      color: #888;
+      font-size: 0.9em;
+      margin-bottom: 24px;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 10px 14px;
+      font-size: 16px;
+      border: 2px solid #ccc;
+      border-radius: 8px;
+      box-sizing: border-box;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input[type="text"]:focus {
+      border-color: #4a90e2;
+    }
+
+    button {
+      margin-top: 16px;
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      background-color: #4a90e2;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    button:hover {
+      background-color: #357abd;
+    }
+
+    #meldung {
+      margin-top: 16px;
+      font-size: 15px;
+      font-weight: bold;
+      min-height: 22px;
+    }
+
+    .richtig { color: #2e7d32; }
+    .falsch  { color: #c62828; }
+  </style>
+</head>
+<body>
+
+<div class="box">
+  <h2>🔒 Passwort</h2>
+  <p class="subtitle" id="titel"></p>
+  <input type="text" id="eingabe" placeholder="Passwort eingeben …" />
+  <button onclick="pruefen()">Prüfen</button>
+  <div id="meldung"></div>
+</div>
+
+<script>
+  const params = new URLSearchParams(window.location.search);
+  const id = parseInt(params.get("id"));
+  const station = stationen[id];
+
+  // Titel setzen
+  document.getElementById("titel").textContent = station.passwortTitel || ("Station " + (id + 1));
+  document.title = "Passwort – Station " + (id + 1);
+
+  function pruefen() {
+    const eingabe = document.getElementById("eingabe").value;
+    const meldung = document.getElementById("meldung");
+
+    if (eingabe === station.passwort) {
+      meldung.className = "richtig";
+      const naechste = id + 1;
+
+      if (naechste >= stationen.length) {
+        // Keine weitere Station → Ende
+        meldung.textContent = "✅ Richtig! Du bist fertig!";
+        setTimeout(() => {
+          window.location.href = "ende.html";
+        }, 1000);
+      } else {
+        // Weiter zum nächsten Tracker
+        meldung.textContent = "✅ Richtig! Weiter zum nächsten Ort…";
+        setTimeout(() => {
+          window.location.href = "tracker.html?id=" + naechste;
+        }, 1000);
+      }
+
+    } else {
+      meldung.textContent = "❌ Falsches Passwort.";
+      meldung.className = "falsch";
+    }
+  }
+
+  document.getElementById("eingabe").addEventListener("keydown", function(e) {
+    if (e.key === "Enter") pruefen();
+  });
+</script>
+
+</body>
+</html>
