@@ -34,8 +34,8 @@ const stationen = [
     lon: 16.747815,
     threshold: 20,
 
-    passwort: null,       // null = last station
-    passwortTitel: null
+    passwort: "123",       // null = last station
+    passwortTitel: "Station 3 HOVNO"
   }
 
   // Add a new station:
