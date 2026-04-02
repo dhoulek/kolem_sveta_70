@@ -7,32 +7,32 @@
 const stationen = [
   {
     // Tracker 0
-    name: "Wien Hauptbahnhof",
-    lat: 48.1853,
-    lon: 16.3760,
-    threshold: 30,
-
-    // Passwort danach
-    passwort: "geheim123",
-    passwortTitel: "Station 1 abgeschlossen!"
-  },
-  {
-    // Tracker 1
-    name: "Stephansplatz Wien",
-    lat: 48.2082,
-    lon: 16.3738,
+    name: "Rybnik",
+    lat: 49.784527,
+    lon: 16.750465,
     threshold: 20,
 
     // Passwort danach
-    passwort: "blauwal99",
-    passwortTitel: "Station 2 abgeschlossen!"
+    passwort: "Rybak123",
+    passwortTitel: "Station 1 HOVNO"
+  },
+  {
+    // Tracker 1
+    name: "Dum 56 Burušov",
+    lat: 49.784332,
+    lon: 16.746994,
+    threshold: 20,
+
+    // Passwort danach
+    passwort: "Dum56Pass",
+    passwortTitel: "Station 2 HOVNO"
   },
   {
     // Tracker 2 – letzte Station, kein Passwort danach
-    name: "Schloss Schönbrunn",
-    lat: 48.1845,
-    lon: 16.3122,
-    threshold: 50,
+    name: "Chalupa",
+    lat: 49.784710,
+    lon: 16.747815,
+    threshold: 20,
 
     passwort: null,       // null = letzte Station
     passwortTitel: null
