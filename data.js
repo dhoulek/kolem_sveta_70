@@ -7,9 +7,9 @@
 const stationen = [
   {
     // Tracker 0
-    name: "Rybnik",
-    lat: 49.784527,
-    lon: 16.750465,
+    name: "Origin",
+    lat: 0,
+    lon: 0,
     threshold: 20,
 
     // Password after this station
