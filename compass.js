@@ -7,9 +7,31 @@
 
   let deviceHeading = null;      // raw sensor value
   let smoothedHeading = null;    // filtered value used for display
-  // How quickly the compass follows the sensor: 0.0 = frozen, 1.0 = no filter.
-  // 0.15 is a good balance for Samsung; increase if it feels too sluggish.
-  const SMOOTHING = 0.30;
+
+  // ── Kalman filter state ───────────────────────────────────
+  // Q: process noise  – how much we trust the sensor changing (higher = more reactive)
+  // R: measurement noise – how noisy we think the raw sensor is (higher = smoother)
+  const kalman = { Q: 0.1, R: 15, P: 1, x: null };
+
+  function kalmanFilter(measurement) {
+    if (kalman.x === null) { kalman.x = measurement; return measurement; }
+
+    // Handle 0°/360° wrap-around: always take the shortest path
+    let diff = measurement - kalman.x;
+    if (diff > 180)  diff -= 360;
+    if (diff < -180) diff += 360;
+    const unwrapped = kalman.x + diff;
+
+    // Predict
+    kalman.P += kalman.Q;
+
+    // Update
+    const K = kalman.P / (kalman.P + kalman.R);   // Kalman gain
+    kalman.x = kalman.x + K * (unwrapped - kalman.x);
+    kalman.P = (1 - K) * kalman.P;
+
+    return (kalman.x + 360) % 360;
+  }
   let ringGroup = null;
   let dot = null;
   let distText = null;
@@ -159,20 +181,6 @@
     dot.setAttribute("cy", CY + dotR * Math.sin(dotRad));
   }
 
-  // Low-pass filter: smoothly moves smoothedHeading toward a new raw value.
-  // Handles the 0°/360° wrap-around so the compass doesn't spin the long way.
-  function applySmoothing(newRaw) {
-    if (smoothedHeading === null) {
-      smoothedHeading = newRaw;   // first value: accept immediately
-      return;
-    }
-    let diff = newRaw - smoothedHeading;
-    // Shortest path around the circle
-    if (diff > 180)  diff -= 360;
-    if (diff < -180) diff += 360;
-    smoothedHeading = (smoothedHeading + diff * SMOOTHING + 360) % 360;
-  }
-
   // Handle device orientation events
   function handleOrientation(e) {
     let raw = null;
@@ -185,7 +193,18 @@
     }
     if (raw !== null) {
       deviceHeading = raw;
-      applySmoothing(raw);
+      const filtered = kalmanFilter(raw);
+
+      // Deadband: only update display if change is larger than 2°
+      // This kills the last remaining 1-3° jitter on Samsung
+      if (smoothedHeading === null) {
+        smoothedHeading = filtered;
+      } else {
+        let diff = filtered - smoothedHeading;
+        if (diff > 180)  diff -= 360;
+        if (diff < -180) diff += 360;
+        if (Math.abs(diff) >= 2) smoothedHeading = filtered;
+      }
     }
   }
 
