@@ -26,7 +26,7 @@ const stations = [
   {
     // Password 1
     passwordTitle: "Doplň chybějící číslo: <br /> 2, 6, 7, 21, 22, ?, 67",
-    password: "66",
+    password: ["66"],
 
     // Tracker 1
     locationName: "Uran",
@@ -37,7 +37,7 @@ const stations = [
   {
     // Password 2
     passwordTitle: "Slepička snese 1 vejce za 1 den.<br />Kolik vajec snese 3 slepičky za 3 dny?",
-    password: "9",
+    password: ["9"],
 
     // Tracker 2 – last tracker, reaching it = game over
     locationName: "Země",
@@ -48,7 +48,7 @@ const stations = [
   {
     // Password 3
     passwordTitle: "Co se o Velikonocích plete, ale není to svetr?",
-    password: "Pomlázka",
+    password: ["Pomlázka"],
 
     // Tracker 3 – last tracker, reaching it = game over
     locationName: "přistávací plocha",
