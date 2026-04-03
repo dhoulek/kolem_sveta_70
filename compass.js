@@ -9,7 +9,7 @@
   let smoothedHeading = null;    // filtered value used for display
   // How quickly the compass follows the sensor: 0.0 = frozen, 1.0 = no filter.
   // 0.15 is a good balance for Samsung; increase if it feels too sluggish.
-  const SMOOTHING = 0.15;
+  const SMOOTHING = 0.30;
   let ringGroup = null;
   let dot = null;
   let distText = null;
