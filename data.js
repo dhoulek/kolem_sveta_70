@@ -18,31 +18,42 @@ const stations = [
     password: "20",
 
     // Tracker 0 (shown after password 0)
-    locationName: "Origin",
-    lat: 0,
-    lon: 0,
-    radius: 20
+    locationName: "Saturn",
+    lat: 49.785484,
+    lon: 16.750004,
+    radius: 10
   },
   {
     // Password 1
-    passwordTitle: "Dum 56",
-    password: "Heslo2",
+    passwordTitle: "Doplň chybějící číslo: <br /> 2, 6, 7, 21, 22, ?, 67",
+    password: "66",
 
     // Tracker 1
-    locationName: "Dum 56 Burušov",
-    lat: 49.784332,
-    lon: 16.746994,
-    radius: 20
+    locationName: "Uran",
+    lat: 49.787510,
+    lon: 16.749357,
+    radius: 10
   },
   {
     // Password 2
-    passwordTitle: "Chalupa",
-    password: "Heslo3",
+    passwordTitle: "Slepička snese 1 vejce za 1 den.<br />Kolik vajec snese 3 slepičky za 3 dny?",
+    password: "9",
 
     // Tracker 2 – last tracker, reaching it = game over
-    locationName: "Chalupa",
-    lat: 49.784710,
-    lon: 16.747815,
+    locationName: "Země",
+    lat: 49.78698759732626,
+    lon: 16.74734459214994,
+    radius: 20
+  },
+  {
+    // Password 3
+    passwordTitle: "Co se o Velikonocích plete, ale není to svetr?",
+    password: "Pomlázka",
+
+    // Tracker 3 – last tracker, reaching it = game over
+    locationName: "přistávací plocha",
+    lat: 49.78472106478665,
+    lon: 16.747868157285193,
     radius: 20
   }
 
