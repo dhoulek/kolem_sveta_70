@@ -13,17 +13,6 @@
 
 const stations = [
   {
-    // Password 1
-    passwordTitle: "Doplň chybějící číslo: <br /> 2, 6, 7, 21, 22, ?, 67",
-    passwords: ["66", "šedesát šest", "sixty-six", "sechsundsechzig"],
-
-    // Tracker 1
-    locationName: "Uran",
-    lat: 49.787510,
-    lon: 16.749357,
-    radius: 10
-  },
-  {
     // Password 0 (shown first)
     passwordTitle: "<b>Na rozehřátí:</b><br />Myslím si číslo.<br />Když ho vynásobím 2 a přičtu 10, dostanu 50.<br />Jaké číslo jsem si myslel?",
     passwords: ["20", "dvacet", "twenty", "zwanzig"],
@@ -32,6 +21,17 @@ const stations = [
     locationName: "Saturn",
     lat: 49.785484,
     lon: 16.750004,
+    radius: 10
+  },
+  {
+    // Password 1
+    passwordTitle: "Doplň chybějící číslo: <br /> 2, 6, 7, 21, 22, ?, 67",
+    passwords: "66",
+
+    // Tracker 1
+    locationName: "Uran",
+    lat: 49.787510,
+    lon: 16.749357,
     radius: 10
   },
   {
