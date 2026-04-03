@@ -5,7 +5,11 @@
 (function () {
   const CX = 140, CY = 140, R_OUTER = 130, R_INNER = 116;
 
-  let deviceHeading = null;
+  let deviceHeading = null;      // raw sensor value
+  let smoothedHeading = null;    // filtered value used for display
+  // How quickly the compass follows the sensor: 0.0 = frozen, 1.0 = no filter.
+  // 0.15 is a good balance for Samsung; increase if it feels too sluggish.
+  const SMOOTHING = 0.15;
   let ringGroup = null;
   let dot = null;
   let distText = null;
@@ -137,8 +141,8 @@
       }
     }
 
-    // Rotate ring so north stays north
-    const heading = deviceHeading !== null ? deviceHeading : 0;
+    // Rotate ring so north stays north (use smoothed heading to avoid jitter)
+    const heading = smoothedHeading !== null ? smoothedHeading : 0;
     ringGroup.setAttribute("transform", `rotate(${-heading}, ${CX}, ${CY})`);
 
     // Move red dot toward destination bearing, corrected for device heading
@@ -155,14 +159,33 @@
     dot.setAttribute("cy", CY + dotR * Math.sin(dotRad));
   }
 
+  // Low-pass filter: smoothly moves smoothedHeading toward a new raw value.
+  // Handles the 0°/360° wrap-around so the compass doesn't spin the long way.
+  function applySmoothing(newRaw) {
+    if (smoothedHeading === null) {
+      smoothedHeading = newRaw;   // first value: accept immediately
+      return;
+    }
+    let diff = newRaw - smoothedHeading;
+    // Shortest path around the circle
+    if (diff > 180)  diff -= 360;
+    if (diff < -180) diff += 360;
+    smoothedHeading = (smoothedHeading + diff * SMOOTHING + 360) % 360;
+  }
+
   // Handle device orientation events
   function handleOrientation(e) {
+    let raw = null;
     if (e.webkitCompassHeading != null) {
-      deviceHeading = e.webkitCompassHeading;               // iOS
+      raw = e.webkitCompassHeading;               // iOS (already filtered by OS)
     } else if (e.absolute && e.alpha != null) {
-      deviceHeading = (360 - e.alpha) % 360;               // Android absolute
-    } else if (e.alpha != null && deviceHeading === null) {
-      deviceHeading = (360 - e.alpha) % 360;               // fallback
+      raw = (360 - e.alpha) % 360;               // Android absolute
+    } else if (e.alpha != null) {
+      raw = (360 - e.alpha) % 360;               // fallback
+    }
+    if (raw !== null) {
+      deviceHeading = raw;
+      applySmoothing(raw);
     }
   }
 
