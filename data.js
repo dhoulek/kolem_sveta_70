@@ -15,7 +15,7 @@ const stations = [
   {
     // Password 0 (shown first)
     passwordTitle: "<b>Na rozehřátí:</b><br />Myslím si číslo.<br />Když ho vynásobím 2 a přičtu 10, dostanu 50.<br />Jaké číslo jsem si myslel?",
-    password: "20",
+    passwords: ["20", "dvacet", "twenty", "zwanzig"],
 
     // Tracker 0 (shown after password 0)
     locationName: "Saturn",
