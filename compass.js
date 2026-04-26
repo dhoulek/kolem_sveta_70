@@ -5,13 +5,12 @@
 (function () {
   const CX = 140, CY = 140, R_OUTER = 130, R_INNER = 116;
 
-  let deviceHeading = null;      // raw sensor value
-  let smoothedHeading = null;    // filtered value used for display
-
   // ── Kalman filter state ───────────────────────────────────
-  // Q: process noise  – how much we trust the sensor changing (higher = more reactive)
-  // R: measurement noise – how noisy we think the raw sensor is (higher = smoother)
-  const kalman = { Q: 0.1, R: 15, P: 1, x: null };
+  // Tuned for display smoothness: low R = more responsive to real movement.
+  // The filter removes sensor noise without adding perceptible lag.
+  // Q: process noise  – how much we trust the sensor changing
+  // R: measurement noise – how noisy the raw sensor is (lower = more reactive)
+  const kalman = { Q: 0.5, R: 3, P: 1, x: null };
 
   function kalmanFilter(measurement) {
     if (kalman.x === null) { kalman.x = measurement; return measurement; }
@@ -33,6 +32,7 @@
     return (kalman.x + 360) % 360;
   }
 
+  // ── State ─────────────────────────────────────────────────
   let ringGroup = null;
   let dot = null;
   let distText = null;
@@ -41,15 +41,25 @@
   // Flag to prevent duplicate processing when both orientation events fire
   let orientationHandledThisFrame = false;
 
-  // ── Smooth animation state ────────────────────────────────
-  // We track the last applied angle for ring and dot separately so we can
-  // always take the shortest rotational path (avoids the 350°-spin-backwards
-  // problem when crossing the 0°/360° boundary).
-  let displayedRingAngle = null;   // last angle we handed to the ring transform
-  let displayedDotAngle = null;   // last angle we handed to the dot position
+  // renderHeading is what the rAF loop actually draws.
+  // It is updated on every sensor event – no deadband, no interval throttle.
+  // Stored as an unbounded accumulator so shortest-path logic works across
+  // the 0°/360° boundary without ever spinning the long way around.
+  let renderHeading = null;   // unbounded accumulated display angle
+  let renderDotAngle = null;   // unbounded accumulated dot angle
+
+  // ── Math helpers ──────────────────────────────────────────
 
   function toRad(v) { return v * Math.PI / 180; }
   function toDeg(v) { return v * 180 / Math.PI; }
+
+  // Shortest angular delta from `from` to `to`, result in range -180..180
+  function shortestDelta(from, to) {
+    let d = (to - from) % 360;
+    if (d > 180) d -= 360;
+    if (d < -180) d += 360;
+    return d;
+  }
 
   function getDistance(lat1, lon1, lat2, lon2) {
     const R = 6371000;
@@ -68,6 +78,8 @@
       Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(dLon);
     return (toDeg(Math.atan2(y, x)) + 360) % 360;
   }
+
+  // ── SVG helpers ───────────────────────────────────────────
 
   function svgEl(tag, attrs) {
     const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
@@ -117,36 +129,23 @@
     }
   }
 
-  // Returns the shortest angular delta from `from` to `to` (range -180..180).
-  // Used to ensure CSS transitions always rotate the short way around.
-  function shortestDelta(from, to) {
-    let d = (to - from) % 360;
-    if (d > 180) d -= 360;
-    if (d < -180) d += 360;
-    return d;
-  }
-
   function initSVG() {
     const svg = document.getElementById("compass-svg");
     if (!svg) return;
 
-    // Rotating ring group.
-    // CSS transition on SVG transform makes the GPU interpolate between updates
-    // instead of jumping. 180ms matches our 200ms setInterval so each new value
-    // arrives just as the previous animation finishes – smooth with no overshoot.
+    // Rotating ring – no CSS transition needed because rAF renders every
+    // filtered sensor value directly, giving native-smooth movement.
     ringGroup = svgEl("g", {});
-    ringGroup.style.transition = "transform 180ms ease-out";
     ringGroup.style.transformOrigin = `${CX}px ${CY}px`;
     buildRing(ringGroup);
     svg.appendChild(ringGroup);
 
-    // Red destination dot – same transition so it glides around the ring edge.
+    // Red destination dot
     dot = svgEl("circle", {
       cx: CX, cy: CY - (R_INNER - 6),
       r: "9", fill: "#e74c3c",
       stroke: "#fff", "stroke-width": "2"
     });
-    dot.style.transition = "cx 180ms ease-out, cy 180ms ease-out";
     svg.appendChild(dot);
 
     // Distance value text
@@ -173,92 +172,83 @@
     svg.appendChild(unitText);
   }
 
-  function updateCompass() {
-    if (!ringGroup) return;
+  // ── Render loop ───────────────────────────────────────────
+  // rAF is used only as a paint scheduler – it reads renderHeading which is
+  // already updated by the sensor event handler. When the device is still,
+  // renderHeading doesn't change so the DOM writes are identical and the
+  // browser skips repainting automatically. Battery impact is minimal.
 
-    // Update distance display
-    if (typeof currentLat !== "undefined" && currentLat !== null &&
-      typeof activeDest !== "undefined" && activeDest !== null) {
-      const dist = getDistance(currentLat, currentLon, activeDest.lat, activeDest.lon);
-      if (dist >= 1000) {
-        distText.textContent = (dist / 1000).toFixed(2);
-        unitText.textContent = "km";
-      } else {
-        distText.textContent = Math.round(dist);
-        unitText.textContent = "m";
+  function renderFrame() {
+    if (ringGroup && renderHeading !== null) {
+
+      // Rotate the compass ring via CSS transform (GPU compositing)
+      ringGroup.style.transform = `rotate(${-renderHeading}deg)`;
+
+      // Update distance display and dot position
+      if (typeof currentLat !== "undefined" && currentLat !== null &&
+        typeof activeDest !== "undefined" && activeDest !== null) {
+        const dist = getDistance(currentLat, currentLon, activeDest.lat, activeDest.lon);
+        if (dist >= 1000) {
+          distText.textContent = (dist / 1000).toFixed(2);
+          unitText.textContent = "km";
+        } else {
+          distText.textContent = Math.round(dist);
+          unitText.textContent = "m";
+        }
+
+        // Move the destination dot using the accumulated (unwrapped) dot angle
+        const dotRad = toRad(renderDotAngle - 90);
+        const dotR = R_INNER - 6;
+        dot.setAttribute("cx", CX + dotR * Math.cos(dotRad));
+        dot.setAttribute("cy", CY + dotR * Math.sin(dotRad));
       }
     }
 
-    // ── Rotate ring ───────────────────────────────────────────
-    // We apply the rotation via CSS transform (GPU-accelerated) instead of the
-    // SVG transform attribute so the CSS transition actually fires.
-    // We also accumulate angle as a running total (not clamped to 0-360) so the
-    // browser always animates the short way – no 350°-backwards-spin at north.
-    const heading = smoothedHeading !== null ? smoothedHeading : 0;
-    const ringTarget = -heading;  // ring rotates opposite to device heading
-
-    if (displayedRingAngle === null) {
-      // First frame: jump instantly, no transition
-      displayedRingAngle = ringTarget;
-      ringGroup.style.transition = "none";
-      ringGroup.style.transform = `rotate(${displayedRingAngle}deg)`;
-      // Re-enable transition after the instant snap is painted
-      requestAnimationFrame(() => { ringGroup.style.transition = "transform 180ms ease-out"; });
-    } else {
-      // Subsequent frames: always rotate the short way around
-      displayedRingAngle += shortestDelta(displayedRingAngle, ringTarget);
-      ringGroup.style.transform = `rotate(${displayedRingAngle}deg)`;
-    }
-
-    // ── Move destination dot ──────────────────────────────────
-    let dotAngle = 0;
-    if (typeof currentLat !== "undefined" && currentLat !== null &&
-      typeof activeDest !== "undefined" && activeDest !== null) {
-      const bearing = getBearing(currentLat, currentLon, activeDest.lat, activeDest.lon);
-      dotAngle = (bearing - heading + 360) % 360;
-    }
-
-    if (displayedDotAngle === null) {
-      displayedDotAngle = dotAngle;
-    } else {
-      displayedDotAngle += shortestDelta(displayedDotAngle, dotAngle);
-    }
-
-    const dotRad = toRad(displayedDotAngle - 90);
-    const dotR = R_INNER - 6;
-    dot.setAttribute("cx", CX + dotR * Math.cos(dotRad));
-    dot.setAttribute("cy", CY + dotR * Math.sin(dotRad));
+    requestAnimationFrame(renderFrame);
   }
 
-  // Handle device orientation events
+  // ── Sensor handler ────────────────────────────────────────
+  // Called directly by the device orientation event – no interval in between.
+  // Every sensor update flows straight through Kalman into renderHeading,
+  // so the rAF loop always has the freshest possible value to paint.
+
   function handleOrientation(e) {
-    // Deduplicate: if both deviceorientationabsolute and deviceorientation fire
-    // in the same frame, only process the first one (saves CPU on Android)
+    // Deduplicate: if both deviceorientationabsolute and deviceorientation
+    // fire together, only process the first one (common on Android)
     if (orientationHandledThisFrame) return;
     orientationHandledThisFrame = true;
     setTimeout(() => { orientationHandledThisFrame = false; }, 0);
 
     let raw = null;
     if (e.webkitCompassHeading != null) {
-      raw = e.webkitCompassHeading;               // iOS (already filtered by OS)
+      raw = e.webkitCompassHeading;               // iOS (pre-filtered by OS)
     } else if (e.absolute && e.alpha != null) {
       raw = (360 - e.alpha) % 360;               // Android absolute
     } else if (e.alpha != null) {
       raw = (360 - e.alpha) % 360;               // fallback
     }
+
     if (raw !== null) {
-      deviceHeading = raw;
       const filtered = kalmanFilter(raw);
 
-      // Deadband: only update display if change is larger than 2°
-      // This kills the last remaining 1-3° jitter on Samsung
-      if (smoothedHeading === null) {
-        smoothedHeading = filtered;
+      // Accumulate heading using shortest-path delta so we never cross the
+      // 0°/360° seam in the wrong direction during rotation
+      if (renderHeading === null) {
+        renderHeading = filtered;
       } else {
-        let diff = filtered - smoothedHeading;
-        if (diff > 180) diff -= 360;
-        if (diff < -180) diff += 360;
-        if (Math.abs(diff) >= 2) smoothedHeading = filtered;
+        renderHeading += shortestDelta(renderHeading, filtered);
+      }
+
+      // Recompute dot angle from fresh heading + GPS bearing
+      if (typeof currentLat !== "undefined" && currentLat !== null &&
+        typeof activeDest !== "undefined" && activeDest !== null) {
+        const bearing = getBearing(currentLat, currentLon, activeDest.lat, activeDest.lon);
+        const dotTarget = (bearing - filtered + 360) % 360;
+        if (renderDotAngle === null) {
+          renderDotAngle = dotTarget;
+        } else {
+          renderDotAngle += shortestDelta(renderDotAngle, dotTarget);
+        }
       }
     }
   }
@@ -270,11 +260,9 @@
     window.addEventListener("deviceorientation", handleOrientation, true);
   };
 
-  // Init SVG on page load, then render at 200ms interval instead of 60fps rAF.
-  // The sensor delivers ~4-10 updates/sec anyway, so 5 renders/sec is sufficient
-  // and saves significant battery compared to requestAnimationFrame.
+  // Init SVG and start the render loop on page load
   document.addEventListener("DOMContentLoaded", function () {
     initSVG();
-    setInterval(updateCompass, 200);
+    requestAnimationFrame(renderFrame);
   });
 })();
