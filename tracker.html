@@ -74,6 +74,7 @@
     let watchId = null, arrived = false;
     let activeDest = null;
     let stationId = 0;
+    let arrivalIntervalId = null;   // stored so we can clear it on arrival
 
     // ── Helpers ───────────────────────────────────────────────
 
@@ -95,13 +96,17 @@
 
       if (distance < activeDest.radius && !arrived) {
         arrived = true;
+
+        // Stop the arrival check interval – no longer needed
+        clearInterval(arrivalIntervalId);
+
         const nextId = stationId + 1;
 
         if (nextId >= stations.length) {
-          // Last tracker reached → game over
+          // Last station reached → game over
           window.location.href = "end.html";
         } else {
-          // Go to the next password
+          // Proceed to the next password screen
           window.location.href = "password.html?id=" + nextId;
         }
       }
@@ -122,6 +127,11 @@
       const status = document.getElementById("status");
       status.innerText = "Získávám polohu...";
       arrived = false;
+
+      // maximumAge: 3000 – accept cached positions up to 3 seconds old.
+      // Walking speed makes this imperceptible, and it reduces GPS chip wake-ups.
+      const gpsOptions = { enableHighAccuracy: true, timeout: 10000, maximumAge: 3000 };
+
       navigator.geolocation.getCurrentPosition(pos => {
         currentLat = pos.coords.latitude;
         currentLon = pos.coords.longitude;
@@ -130,14 +140,15 @@
           currentLat = p.coords.latitude;
           currentLon = p.coords.longitude;
           updateMyMarker();
-        }, handleGpsError, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
-      }, handleGpsError, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
+        }, handleGpsError, gpsOptions);
+      }, handleGpsError, gpsOptions);
     }
 
     async function startTracking() {
       const status = document.getElementById("status");
       if (!navigator.geolocation) { status.innerText = "GPS není podporována"; return; }
 
+      // iOS requires a user gesture before DeviceOrientationEvent.requestPermission()
       if (typeof DeviceOrientationEvent !== "undefined" &&
         typeof DeviceOrientationEvent.requestPermission === "function") {
         status.innerText = "Klepni pro spuštění...";
@@ -153,7 +164,8 @@
       startGPS();
     }
 
-    setInterval(updateUI, 1000);
+    // Start arrival check interval and store the ID so it can be cleared on arrival
+    arrivalIntervalId = setInterval(updateUI, 1000);
 
     // ── Init ──────────────────────────────────────────────────
 

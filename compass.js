@@ -18,7 +18,7 @@
 
     // Handle 0°/360° wrap-around: always take the shortest path
     let diff = measurement - kalman.x;
-    if (diff > 180)  diff -= 360;
+    if (diff > 180) diff -= 360;
     if (diff < -180) diff += 360;
     const unwrapped = kalman.x + diff;
 
@@ -32,10 +32,14 @@
 
     return (kalman.x + 360) % 360;
   }
+
   let ringGroup = null;
   let dot = null;
   let distText = null;
   let unitText = null;
+
+  // Flag to prevent duplicate processing when both orientation events fire
+  let orientationHandledThisFrame = false;
 
   function toRad(v) { return v * Math.PI / 180; }
   function toDeg(v) { return v * 180 / Math.PI; }
@@ -183,6 +187,12 @@
 
   // Handle device orientation events
   function handleOrientation(e) {
+    // Deduplicate: if both deviceorientationabsolute and deviceorientation fire
+    // in the same frame, only process the first one (saves CPU on Android)
+    if (orientationHandledThisFrame) return;
+    orientationHandledThisFrame = true;
+    setTimeout(() => { orientationHandledThisFrame = false; }, 0);
+
     let raw = null;
     if (e.webkitCompassHeading != null) {
       raw = e.webkitCompassHeading;               // iOS (already filtered by OS)
@@ -201,7 +211,7 @@
         smoothedHeading = filtered;
       } else {
         let diff = filtered - smoothedHeading;
-        if (diff > 180)  diff -= 360;
+        if (diff > 180) diff -= 360;
         if (diff < -180) diff += 360;
         if (Math.abs(diff) >= 2) smoothedHeading = filtered;
       }
@@ -215,13 +225,11 @@
     window.addEventListener("deviceorientation", handleOrientation, true);
   };
 
-  // Init SVG and start animation loop on page load
+  // Init SVG on page load, then render at 200ms interval instead of 60fps rAF.
+  // The sensor delivers ~4-10 updates/sec anyway, so 5 renders/sec is sufficient
+  // and saves significant battery compared to requestAnimationFrame.
   document.addEventListener("DOMContentLoaded", function () {
     initSVG();
-    function loop() {
-      updateCompass();
-      requestAnimationFrame(loop);
-    }
-    requestAnimationFrame(loop);
+    setInterval(updateCompass, 200);
   });
 })();
