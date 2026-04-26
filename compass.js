@@ -5,19 +5,40 @@
 (function () {
   const CX = 140, CY = 140, R_OUTER = 130, R_INNER = 116;
 
-  // ── Kalman filter state ───────────────────────────────────
-  // Tuned for display smoothness: low R = more responsive to real movement.
-  // The filter removes sensor noise without adding perceptible lag.
-  // Q: process noise  – how much we trust the sensor changing
-  // R: measurement noise – how noisy the raw sensor is (lower = more reactive)
-  const kalman = { Q: 0.5, R: 3, P: 1, x: null };
+  // ── Smoothing pipeline ────────────────────────────────────
+  // Samsung (and other Android) devices deliver raw magnetometer values that
+  // can jump ±3–8° between frames even when the device is perfectly still.
+  // iPhones do this fusion in hardware/OS so the values arrive pre-smoothed.
+  // We replicate that behaviour in three stages:
+  //
+  //   Stage 1 – Kalman filter
+  //     Statistically optimal estimator. Balances reacting to real movement
+  //     against ignoring sensor noise. Q/R ratio is the key tuning parameter:
+  //     higher Q/R = more reactive, lower = smoother.
+  //
+  //   Stage 2 – Exponential low-pass filter (EMA)
+  //     A second, gentler smoothing pass. alpha controls the blend:
+  //     0 = never moves, 1 = raw Kalman output (no extra smoothing).
+  //     At alpha=0.15 it adds ~2-3 frames of lag which is imperceptible
+  //     while effectively killing the remaining flicker on Samsung.
+  //
+  //   Stage 3 – Stillness / deadband gate
+  //     If the device has not moved more than STILL_THRESHOLD degrees over
+  //     the last STILL_WINDOW samples, we lock the output to the running
+  //     average of those samples. This eliminates the last ±1-2° flicker
+  //     that persists even after Kalman + EMA when the phone is stationary.
+  //     As soon as real movement is detected the lock releases instantly.
+
+  // Stage 1 – Kalman
+  // Q low, R higher → trust the model more than the noisy Samsung sensor.
+  const kalman = { Q: 0.1, R: 8, P: 1, x: null };
 
   function kalmanFilter(measurement) {
     if (kalman.x === null) { kalman.x = measurement; return measurement; }
 
     // Handle 0°/360° wrap-around: always take the shortest path
     let diff = measurement - kalman.x;
-    if (diff > 180)  diff -= 360;
+    if (diff > 180) diff -= 360;
     if (diff < -180) diff += 360;
     const unwrapped = kalman.x + diff;
 
@@ -32,11 +53,72 @@
     return (kalman.x + 360) % 360;
   }
 
+  // Stage 2 – Exponential moving average (low-pass)
+  // alpha=0.15 gives strong smoothing with minimal perceptible lag at walking pace.
+  const EMA_ALPHA = 0.15;
+  let emaHeading = null;
+
+  function emaFilter(kalmanOutput) {
+    if (emaHeading === null) { emaHeading = kalmanOutput; return kalmanOutput; }
+    let diff = kalmanOutput - emaHeading;
+    if (diff > 180) diff -= 360;
+    if (diff < -180) diff += 360;
+    emaHeading = (emaHeading + EMA_ALPHA * diff + 360) % 360;
+    return emaHeading;
+  }
+
+  // Stage 3 – Stillness gate
+  // Collects the last STILL_WINDOW readings. If the spread (max-min) stays
+  // below STILL_THRESHOLD the output is locked to the window average,
+  // eliminating residual flicker when the phone is stationary.
+  const STILL_WINDOW = 8;     // number of samples to examine
+  const STILL_THRESHOLD = 2.5;   // degrees – spread below this = "still"
+  const stillBuf = [];
+  let lockedHeading = null;    // non-null while in stillness-lock mode
+
+  function stillnessGate(emaOutput) {
+    stillBuf.push(emaOutput);
+    if (stillBuf.length > STILL_WINDOW) stillBuf.shift();
+    if (stillBuf.length < STILL_WINDOW) return emaOutput;   // not enough data yet
+
+    // Compute angular spread of the buffer (handles 0/360 wrap)
+    let min = stillBuf[0], max = stillBuf[0];
+    for (const v of stillBuf) {
+      // Unwrap relative to first sample before comparing
+      let d = v - stillBuf[0];
+      if (d > 180) d -= 360;
+      if (d < -180) d += 360;
+      if (d < min - stillBuf[0]) min = v;
+      if (d > max - stillBuf[0]) max = v;
+    }
+    let spread = max - min;
+    if (spread > 180) spread -= 360;
+    if (spread < -180) spread += 360;
+    spread = Math.abs(spread);
+
+    if (spread < STILL_THRESHOLD) {
+      // Device is still – compute locked average to eliminate flicker
+      let sum = 0, ref = stillBuf[0];
+      for (const v of stillBuf) {
+        let d = v - ref;
+        if (d > 180) d -= 360;
+        if (d < -180) d += 360;
+        sum += d;
+      }
+      lockedHeading = (ref + sum / stillBuf.length + 360) % 360;
+      return lockedHeading;
+    } else {
+      // Real movement detected – release lock and pass through
+      lockedHeading = null;
+      return emaOutput;
+    }
+  }
+
   // ── State ─────────────────────────────────────────────────
   let ringGroup = null;
-  let dot       = null;
-  let distText  = null;
-  let unitText  = null;
+  let dot = null;
+  let distText = null;
+  let unitText = null;
 
   // True once we confirmed deviceorientationabsolute fires on this device.
   // When set, all plain deviceorientation events are ignored so the relative
@@ -47,7 +129,7 @@
   // It is updated on every sensor event – no deadband, no interval throttle.
   // Stored as an unbounded accumulator so shortest-path logic works across
   // the 0°/360° boundary without ever spinning the long way around.
-  let renderHeading  = null;   // unbounded accumulated display angle
+  let renderHeading = null;   // unbounded accumulated display angle
   let renderDotAngle = null;   // unbounded accumulated dot angle
 
   // ── Math helpers ──────────────────────────────────────────
@@ -58,7 +140,7 @@
   // Shortest angular delta from `from` to `to`, result in range -180..180
   function shortestDelta(from, to) {
     let d = (to - from) % 360;
-    if (d > 180)  d -= 360;
+    if (d > 180) d -= 360;
     if (d < -180) d += 360;
     return d;
   }
@@ -200,7 +282,7 @@
 
         // Move the destination dot using the accumulated (unwrapped) dot angle
         const dotRad = toRad(renderDotAngle - 90);
-        const dotR   = R_INNER - 6;
+        const dotR = R_INNER - 6;
         dot.setAttribute("cx", CX + dotR * Math.cos(dotRad));
         dot.setAttribute("cy", CY + dotR * Math.sin(dotRad));
       }
@@ -215,7 +297,11 @@
   // same physical event thanks to the usingAbsolute guard below.
 
   function processHeading(raw) {
-    const filtered = kalmanFilter(raw);
+    // Run all three smoothing stages in sequence:
+    // raw sensor → Kalman → EMA low-pass → stillness gate → render
+    const stage1 = kalmanFilter(raw);
+    const stage2 = emaFilter(stage1);
+    const filtered = stillnessGate(stage2);
 
     // Accumulate heading using shortest-path delta so we never cross the
     // 0°/360° seam in the wrong direction during rotation
@@ -228,7 +314,7 @@
     // Recompute dot angle from fresh heading + GPS bearing
     if (typeof currentLat !== "undefined" && currentLat !== null &&
       typeof activeDest !== "undefined" && activeDest !== null) {
-      const bearing   = getBearing(currentLat, currentLon, activeDest.lat, activeDest.lon);
+      const bearing = getBearing(currentLat, currentLon, activeDest.lat, activeDest.lon);
       const dotTarget = (bearing - filtered + 360) % 360;
       if (renderDotAngle === null) {
         renderDotAngle = dotTarget;
