@@ -41,6 +41,13 @@
   // Flag to prevent duplicate processing when both orientation events fire
   let orientationHandledThisFrame = false;
 
+  // ── Smooth animation state ────────────────────────────────
+  // We track the last applied angle for ring and dot separately so we can
+  // always take the shortest rotational path (avoids the 350°-spin-backwards
+  // problem when crossing the 0°/360° boundary).
+  let displayedRingAngle = null;   // last angle we handed to the ring transform
+  let displayedDotAngle = null;   // last angle we handed to the dot position
+
   function toRad(v) { return v * Math.PI / 180; }
   function toDeg(v) { return v * 180 / Math.PI; }
 
@@ -110,21 +117,36 @@
     }
   }
 
+  // Returns the shortest angular delta from `from` to `to` (range -180..180).
+  // Used to ensure CSS transitions always rotate the short way around.
+  function shortestDelta(from, to) {
+    let d = (to - from) % 360;
+    if (d > 180) d -= 360;
+    if (d < -180) d += 360;
+    return d;
+  }
+
   function initSVG() {
     const svg = document.getElementById("compass-svg");
     if (!svg) return;
 
-    // Rotating ring group
+    // Rotating ring group.
+    // CSS transition on SVG transform makes the GPU interpolate between updates
+    // instead of jumping. 180ms matches our 200ms setInterval so each new value
+    // arrives just as the previous animation finishes – smooth with no overshoot.
     ringGroup = svgEl("g", {});
+    ringGroup.style.transition = "transform 180ms ease-out";
+    ringGroup.style.transformOrigin = `${CX}px ${CY}px`;
     buildRing(ringGroup);
     svg.appendChild(ringGroup);
 
-    // Red destination dot (stays in screen space, not rotated with ring)
+    // Red destination dot – same transition so it glides around the ring edge.
     dot = svgEl("circle", {
       cx: CX, cy: CY - (R_INNER - 6),
       r: "9", fill: "#e74c3c",
       stroke: "#fff", "stroke-width": "2"
     });
+    dot.style.transition = "cx 180ms ease-out, cy 180ms ease-out";
     svg.appendChild(dot);
 
     // Distance value text
@@ -167,11 +189,28 @@
       }
     }
 
-    // Rotate ring so north stays north (use smoothed heading to avoid jitter)
+    // ── Rotate ring ───────────────────────────────────────────
+    // We apply the rotation via CSS transform (GPU-accelerated) instead of the
+    // SVG transform attribute so the CSS transition actually fires.
+    // We also accumulate angle as a running total (not clamped to 0-360) so the
+    // browser always animates the short way – no 350°-backwards-spin at north.
     const heading = smoothedHeading !== null ? smoothedHeading : 0;
-    ringGroup.setAttribute("transform", `rotate(${-heading}, ${CX}, ${CY})`);
+    const ringTarget = -heading;  // ring rotates opposite to device heading
 
-    // Move red dot toward destination bearing, corrected for device heading
+    if (displayedRingAngle === null) {
+      // First frame: jump instantly, no transition
+      displayedRingAngle = ringTarget;
+      ringGroup.style.transition = "none";
+      ringGroup.style.transform = `rotate(${displayedRingAngle}deg)`;
+      // Re-enable transition after the instant snap is painted
+      requestAnimationFrame(() => { ringGroup.style.transition = "transform 180ms ease-out"; });
+    } else {
+      // Subsequent frames: always rotate the short way around
+      displayedRingAngle += shortestDelta(displayedRingAngle, ringTarget);
+      ringGroup.style.transform = `rotate(${displayedRingAngle}deg)`;
+    }
+
+    // ── Move destination dot ──────────────────────────────────
     let dotAngle = 0;
     if (typeof currentLat !== "undefined" && currentLat !== null &&
       typeof activeDest !== "undefined" && activeDest !== null) {
@@ -179,7 +218,13 @@
       dotAngle = (bearing - heading + 360) % 360;
     }
 
-    const dotRad = toRad(dotAngle - 90);
+    if (displayedDotAngle === null) {
+      displayedDotAngle = dotAngle;
+    } else {
+      displayedDotAngle += shortestDelta(displayedDotAngle, dotAngle);
+    }
+
+    const dotRad = toRad(displayedDotAngle - 90);
     const dotR = R_INNER - 6;
     dot.setAttribute("cx", CX + dotR * Math.cos(dotRad));
     dot.setAttribute("cy", CY + dotR * Math.sin(dotRad));
