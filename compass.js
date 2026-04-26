@@ -17,7 +17,7 @@
 
     // Handle 0°/360° wrap-around: always take the shortest path
     let diff = measurement - kalman.x;
-    if (diff > 180) diff -= 360;
+    if (diff > 180)  diff -= 360;
     if (diff < -180) diff += 360;
     const unwrapped = kalman.x + diff;
 
@@ -34,18 +34,20 @@
 
   // ── State ─────────────────────────────────────────────────
   let ringGroup = null;
-  let dot = null;
-  let distText = null;
-  let unitText = null;
+  let dot       = null;
+  let distText  = null;
+  let unitText  = null;
 
-  // Flag to prevent duplicate processing when both orientation events fire
-  let orientationHandledThisFrame = false;
+  // True once we confirmed deviceorientationabsolute fires on this device.
+  // When set, all plain deviceorientation events are ignored so the relative
+  // (drifting) sensor never contaminates the absolute heading.
+  let usingAbsolute = false;
 
   // renderHeading is what the rAF loop actually draws.
   // It is updated on every sensor event – no deadband, no interval throttle.
   // Stored as an unbounded accumulator so shortest-path logic works across
   // the 0°/360° boundary without ever spinning the long way around.
-  let renderHeading = null;   // unbounded accumulated display angle
+  let renderHeading  = null;   // unbounded accumulated display angle
   let renderDotAngle = null;   // unbounded accumulated dot angle
 
   // ── Math helpers ──────────────────────────────────────────
@@ -56,7 +58,7 @@
   // Shortest angular delta from `from` to `to`, result in range -180..180
   function shortestDelta(from, to) {
     let d = (to - from) % 360;
-    if (d > 180) d -= 360;
+    if (d > 180)  d -= 360;
     if (d < -180) d += 360;
     return d;
   }
@@ -198,7 +200,7 @@
 
         // Move the destination dot using the accumulated (unwrapped) dot angle
         const dotRad = toRad(renderDotAngle - 90);
-        const dotR = R_INNER - 6;
+        const dotR   = R_INNER - 6;
         dot.setAttribute("cx", CX + dotR * Math.cos(dotRad));
         dot.setAttribute("cy", CY + dotR * Math.sin(dotRad));
       }
@@ -208,56 +210,70 @@
   }
 
   // ── Sensor handler ────────────────────────────────────────
-  // Called directly by the device orientation event – no interval in between.
-  // Every sensor update flows straight through Kalman into renderHeading,
-  // so the rAF loop always has the freshest possible value to paint.
+  // Processes a validated raw heading degree value.
+  // Called by either handleAbsolute or handleRelative – never both for the
+  // same physical event thanks to the usingAbsolute guard below.
 
-  function handleOrientation(e) {
-    // Deduplicate: if both deviceorientationabsolute and deviceorientation
-    // fire together, only process the first one (common on Android)
-    if (orientationHandledThisFrame) return;
-    orientationHandledThisFrame = true;
-    setTimeout(() => { orientationHandledThisFrame = false; }, 0);
+  function processHeading(raw) {
+    const filtered = kalmanFilter(raw);
 
-    let raw = null;
-    if (e.webkitCompassHeading != null) {
-      raw = e.webkitCompassHeading;               // iOS (pre-filtered by OS)
-    } else if (e.absolute && e.alpha != null) {
-      raw = (360 - e.alpha) % 360;               // Android absolute
-    } else if (e.alpha != null) {
-      raw = (360 - e.alpha) % 360;               // fallback
+    // Accumulate heading using shortest-path delta so we never cross the
+    // 0°/360° seam in the wrong direction during rotation
+    if (renderHeading === null) {
+      renderHeading = filtered;
+    } else {
+      renderHeading += shortestDelta(renderHeading, filtered);
     }
 
-    if (raw !== null) {
-      const filtered = kalmanFilter(raw);
-
-      // Accumulate heading using shortest-path delta so we never cross the
-      // 0°/360° seam in the wrong direction during rotation
-      if (renderHeading === null) {
-        renderHeading = filtered;
+    // Recompute dot angle from fresh heading + GPS bearing
+    if (typeof currentLat !== "undefined" && currentLat !== null &&
+      typeof activeDest !== "undefined" && activeDest !== null) {
+      const bearing   = getBearing(currentLat, currentLon, activeDest.lat, activeDest.lon);
+      const dotTarget = (bearing - filtered + 360) % 360;
+      if (renderDotAngle === null) {
+        renderDotAngle = dotTarget;
       } else {
-        renderHeading += shortestDelta(renderHeading, filtered);
-      }
-
-      // Recompute dot angle from fresh heading + GPS bearing
-      if (typeof currentLat !== "undefined" && currentLat !== null &&
-        typeof activeDest !== "undefined" && activeDest !== null) {
-        const bearing = getBearing(currentLat, currentLon, activeDest.lat, activeDest.lon);
-        const dotTarget = (bearing - filtered + 360) % 360;
-        if (renderDotAngle === null) {
-          renderDotAngle = dotTarget;
-        } else {
-          renderDotAngle += shortestDelta(renderDotAngle, dotTarget);
-        }
+        renderDotAngle += shortestDelta(renderDotAngle, dotTarget);
       }
     }
   }
 
-  // Called from tracker.html to start listening to device orientation
+  // Handler for deviceorientationabsolute (Android / modern browsers).
+  // Once this fires even once we know the device supports absolute heading
+  // and we set usingAbsolute = true so the relative fallback is silenced.
+  function handleAbsolute(e) {
+    if (e.alpha == null) return;
+    usingAbsolute = true;
+    processHeading((360 - e.alpha) % 360);
+  }
+
+  // Handler for plain deviceorientation.
+  // Used on iOS (webkitCompassHeading) and as a last-resort fallback on
+  // Android devices that never fire deviceorientationabsolute.
+  // Ignored entirely once handleAbsolute has confirmed absolute support,
+  // preventing the drifting relative sensor from mixing in on Samsung etc.
+  function handleRelative(e) {
+    if (usingAbsolute) return;   // absolute is available – ignore relative
+
+    let raw = null;
+    if (e.webkitCompassHeading != null) {
+      raw = e.webkitCompassHeading;               // iOS (pre-filtered by OS)
+    } else if (e.alpha != null) {
+      raw = (360 - e.alpha) % 360;               // Android fallback (relative)
+    }
+    if (raw !== null) processHeading(raw);
+  }
+
+  // Called from tracker.html to start listening to device orientation.
+  // Strategy:
+  //   1. Always register deviceorientationabsolute – best on Android/Samsung.
+  //   2. Always register deviceorientation – needed for iOS and as fallback.
+  //   3. handleRelative checks usingAbsolute and exits immediately if absolute
+  //      has fired, so on Samsung only the absolute stream is ever processed.
   window.startCompassOrientation = function () {
     if (!window.DeviceOrientationEvent) return;
-    window.addEventListener("deviceorientationabsolute", handleOrientation, true);
-    window.addEventListener("deviceorientation", handleOrientation, true);
+    window.addEventListener("deviceorientationabsolute", handleAbsolute, true);
+    window.addEventListener("deviceorientation", handleRelative, true);
   };
 
   // Init SVG and start the render loop on page load
