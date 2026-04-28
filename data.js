@@ -14,7 +14,7 @@
 const stations = [
   {
     // Password 0 (shown first)
-    passwordTitle: "<h2b>Londýn</h2><br /><br />Co bude Tvůj další cíl?",
+    passwordTitle: "<h2>Londýn</h2><br /><br />Co bude Tvůj další cíl?",
     passwords: ["Paris", "Paříž", "paris", "paříž"],
 
     // Tracker 0 (shown after password 0)
@@ -47,14 +47,14 @@ const stations = [
   },
   {
     // Password 3
-    passwordTitle: "Co se o Velikonocích plete, ale není to svetr?",
-    password: ["Pomlázka"],
+    passwordTitle: "<h2>Egypt</h2><br /><br />Co bude Tvůj další cíl?",
+    password: ["Západ USA", "západ USA", "západ usa", "Zapad USA", "zapad USA", "zapad usa"],
 
     // Tracker 3 – last tracker, reaching it = game over
-    locationName: "přistávací plocha",
-    lat: 49.78472106478665,
-    lon: 16.747868157285193,
-    radius: 20
+    locationName: "San Fracisco",
+    lat: 49.0481014,
+    lon: 14.7615056,
+    radius: 10
   }
 
   // Add a new station:
