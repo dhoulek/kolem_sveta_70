@@ -14,36 +14,36 @@
 const stations = [
   {
     // Password 0 (shown first)
-    passwordTitle: "<b>Na rozehřátí:</b><br />Myslím si číslo.<br />Když ho vynásobím 2 a přičtu 10, dostanu 50.<br />Jaké číslo jsem si myslel?",
-    passwords: ["20", "dvacet", "twenty", "zwanzig"],
+    passwordTitle: "<b>Londýn</b><br /><br />Co bude Tvůj další cíl?",
+    passwords: ["Paris", "Paříž", "paris", "paříž"],
 
     // Tracker 0 (shown after password 0)
-    locationName: "Saturn",
-    lat: 49.785484,
-    lon: 16.750004,
+    locationName: "Paříž",
+    lat: 49.0210608,
+    lon: 14.7805728,
     radius: 10
   },
   {
     // Password 1
-    passwordTitle: "Doplň chybějící číslo: <br /> 2, 6, 7, 21, 22, ?, 67",
-    passwords: "66",
+    passwordTitle: "<b>Paříž</b><br /><br />Co bude Tvůj další cíl?",
+    passwords: ["Itálie", "itálie", "italie", "Italie"],
 
     // Tracker 1
-    locationName: "Uran",
-    lat: 49.787510,
-    lon: 16.749357,
-    radius: 10
+    locationName: "Itálie",
+    lat: 49.0387000,
+    lon: 14.8149569,
+    radius: 20
   },
   {
     // Password 2
-    passwordTitle: "Slepička snese 1 vejce za 1 den.<br />Kolik vajec snese 3 slepičky za 3 dny?",
-    passwords: ["9", "devět", "nine", "neun"],
+    passwordTitle: "<b>Itálie</b><br /><br />Co bude Tvůj další cíl?",
+    passwords: ["Egypt", "egypt"],
 
     // Tracker 2 – last tracker, reaching it = game over
-    locationName: "Země",
-    lat: 49.78698759732626,
-    lon: 16.74734459214994,
-    radius: 20
+    locationName: "Egypt",
+    lat: 49.0537517,
+    lon: 14.7890756,
+    radius: 10
   },
   {
     // Password 3
