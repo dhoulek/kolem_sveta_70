@@ -14,7 +14,7 @@
 const stations = [
   {
     // Password 0 (shown first)
-    passwordTitle: "<b>Londýn</b><br /><br />Co bude Tvůj další cíl?",
+    passwordTitle: "<h2b>Londýn</h2><br /><br />Co bude Tvůj další cíl?",
     passwords: ["Paris", "Paříž", "paris", "paříž"],
 
     // Tracker 0 (shown after password 0)
@@ -25,7 +25,7 @@ const stations = [
   },
   {
     // Password 1
-    passwordTitle: "<b>Paříž</b><br /><br />Co bude Tvůj další cíl?",
+    passwordTitle: "<h2>Paříž</h2><br /><br />Co bude Tvůj další cíl?",
     passwords: ["Itálie", "itálie", "italie", "Italie"],
 
     // Tracker 1
@@ -36,7 +36,7 @@ const stations = [
   },
   {
     // Password 2
-    passwordTitle: "<b>Itálie</b><br /><br />Co bude Tvůj další cíl?",
+    passwordTitle: "<h2>Itálie</h2><br /><br />Co bude Tvůj další cíl?",
     passwords: ["Egypt", "egypt"],
 
     // Tracker 2 – last tracker, reaching it = game over
