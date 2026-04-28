@@ -48,7 +48,7 @@ const stations = [
   {
     // Password 3
     passwordTitle: "<h2>Egypt</h2><br />Co bude Tvůj další cíl?",
-    password: ["Západ USA", "západ USA", "západ usa", "Zapad USA", "zapad USA", "zapad usa"],
+    passwords: ["Západ USA", "západ USA", "západ usa", "Zapad USA", "zapad USA", "zapad usa"],
 
     // Tracker 3
     locationName: "San Fracisco",
@@ -59,7 +59,7 @@ const stations = [
   {
     // Password 4
     passwordTitle: "<h2>San Fracisco</h2><br />Co bude Tvůj další cíl?",
-    password: ["New York", "new york"],
+    passwords: ["New York", "new york"],
 
     // Tracker 4
     locationName: "New York",
@@ -70,19 +70,18 @@ const stations = [
   {
     // Password 5
     passwordTitle: "<h2>New York</h2><br />Co bude Tvůj další cíl?",
-    password: ["Dublin", "dublin"],
+    passwords: ["Dublin", "dublin"],
 
     // Tracker 5
     locationName: "Dublin",
     lat: 49.0154225,
     lon: 14.7428672,
     radius: 10
-  }
-  ,
+  },
   {
     // Password  6
     passwordTitle: "<h2>Dublin</h2><br />Co bude Tvůj další cíl?",
-    password: ["Třeboň", "třeboň", "Trebon", "trebon"],
+    passwords: ["Třeboň", "třeboň", "Trebon", "trebon"],
 
     // Tracker 6 – last tracker, reaching it = game over
     locationName: "Třeboň",
