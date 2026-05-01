@@ -179,7 +179,7 @@
     }));
 
     // 16 ticks: 4 cardinal (big) + 3 minor between each
-    const cardinals = { 0: "N", 90: "E", 180: "S", 270: "W" };
+    const cardinals = { 0: "S", 90: "V", 180: "J", 270: "Z" };
     for (let i = 0; i < 16; i++) {
       const angleDeg = i * 22.5;
       const rad = toRad(angleDeg - 90);
